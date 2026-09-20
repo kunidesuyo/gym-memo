@@ -17,6 +17,12 @@ export type NewSet = z.infer<typeof newSetSchema>
 /** セット入力（種目は画面側の select が持つので除く）。 */
 export const setInputSchema = newSetSchema.omit({ exerciseId: true })
 
+/**
+ * セットの修正。種目は変更できない。
+ * 変えると setOrder（ワークアウト×種目ごとの連番）の意味が壊れるため。
+ */
+export const updateSetSchema = setInputSchema
+
 export type SetInput = z.infer<typeof setInputSchema>
 
 /**

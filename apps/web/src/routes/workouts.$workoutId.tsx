@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { WorkoutRecorder } from '../components/WorkoutRecorder'
+import { WorkoutDetail } from '../components/WorkoutDetail'
 
 export const Route = createFileRoute('/workouts/$workoutId')({
   component: RouteComponent,
@@ -7,5 +7,5 @@ export const Route = createFileRoute('/workouts/$workoutId')({
 
 function RouteComponent() {
   const { workoutId } = Route.useParams()
-  return <WorkoutRecorder workoutId={workoutId} />
+  return <WorkoutDetail workoutId={workoutId} />
 }

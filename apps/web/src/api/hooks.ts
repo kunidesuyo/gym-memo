@@ -208,3 +208,112 @@ export function useAddSet(workoutId: string) {
     },
   })
 }
+
+export function useUpdateSet(workoutId: string) {
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ id, ...input }: SetInput & { id: string }) => {
+      const res = await client.api.sets[':id'].$patch({
+        param: { id },
+        json: input,
+      })
+      if (!res.ok) throw await errorFrom(res, 'セットの修正に失敗しました')
+      return res.json()
+    },
+
+    onMutate: async ({ id, ...input }) => {
+      await qc.cancelQueries({ queryKey: keys.workout(workoutId) })
+      const previous = qc.getQueryData<Workout>(keys.workout(workoutId))
+
+      qc.setQueryData<Workout>(keys.workout(workoutId), (old) =>
+        old
+          ? {
+              ...old,
+              sets: old.sets.map((s) =>
+                s.id === id
+                  ? {
+                      ...s,
+                      weightKg: input.weightKg,
+                      reps: input.reps,
+                      note: input.note ?? null,
+                    }
+                  : s,
+              ),
+            }
+          : old,
+      )
+
+      return { previous }
+    },
+
+    onError: (_err, _input, context) => {
+      if (context?.previous) {
+        qc.setQueryData(keys.workout(workoutId), context.previous)
+      }
+    },
+
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: keys.workout(workoutId) })
+    },
+  })
+}
+
+export function useDeleteSet(workoutId: string) {
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const res = await client.api.sets[':id'].$delete({ param: { id } })
+      if (!res.ok) throw await errorFrom(res, 'セットの削除に失敗しました')
+    },
+
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: keys.workout(workoutId) })
+      const previous = qc.getQueryData<Workout>(keys.workout(workoutId))
+
+      // 画面上でも setOrder を詰め直す。サーバー側も同じことをするので、
+      // onSettled の再取得で最終的に一致する。
+      qc.setQueryData<Workout>(keys.workout(workoutId), (old) => {
+        if (!old) return old
+        const removed = old.sets.find((s) => s.id === id)
+        const rest = old.sets.filter((s) => s.id !== id)
+        if (!removed) return { ...old, sets: rest }
+
+        let order = 0
+        return {
+          ...old,
+          sets: rest.map((s) =>
+            s.exerciseId === removed.exerciseId
+              ? { ...s, setOrder: ++order }
+              : s,
+          ),
+        }
+      })
+
+      return { previous }
+    },
+
+    onError: (_err, _id, context) => {
+      if (context?.previous) {
+        qc.setQueryData(keys.workout(workoutId), context.previous)
+      }
+    },
+
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: keys.workout(workoutId) })
+      qc.invalidateQueries({ queryKey: keys.workouts() })
+    },
+  })
+}
+
+export function useDeleteWorkout() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const res = await client.api.workouts[':id'].$delete({ param: { id } })
+      if (!res.ok) throw await errorFrom(res, 'セッションの削除に失敗しました')
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.workouts() }),
+  })
+}

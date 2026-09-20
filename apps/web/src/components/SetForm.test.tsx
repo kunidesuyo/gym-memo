@@ -65,10 +65,10 @@ describe('SetForm', () => {
     })
   })
 
-  it('送信後は重量を残して回数だけ空にする（連続入力のため）', async () => {
+  it('resetAfterSubmit なら送信後に重量を残して回数とメモを空にする', async () => {
     const user = userEvent.setup()
     const onSubmit = vi.fn().mockResolvedValue(undefined)
-    render(<SetForm onSubmit={onSubmit} isPending={false} />)
+    render(<SetForm resetAfterSubmit onSubmit={onSubmit} isPending={false} />)
 
     await user.type(screen.getByLabelText('重量 (kg)'), '60')
     await user.type(screen.getByLabelText('回数'), '10')
@@ -77,5 +77,32 @@ describe('SetForm', () => {
     expect(await screen.findByLabelText('回数')).toHaveValue('')
     expect(screen.getByLabelText('メモ（任意）')).toHaveValue('')
     expect(screen.getByLabelText('重量 (kg)')).toHaveValue('60')
+  })
+
+  it('編集時は初期値を表示し、送信後も値を消さない', async () => {
+    const user = userEvent.setup()
+    const onSubmit = vi.fn().mockResolvedValue(undefined)
+    render(
+      <SetForm
+        initial={{ weightKg: '60', reps: '10', note: 'メモ' }}
+        submitLabel="更新する"
+        onCancel={() => {}}
+        onSubmit={onSubmit}
+        isPending={false}
+      />,
+    )
+
+    expect(screen.getByLabelText('重量 (kg)')).toHaveValue('60')
+    expect(screen.getByLabelText('メモ（任意）')).toHaveValue('メモ')
+
+    await user.click(screen.getByRole('button', { name: '更新する' }))
+
+    expect(onSubmit).toHaveBeenCalledWith({
+      weightKg: 60,
+      reps: 10,
+      note: 'メモ',
+    })
+    // 編集フォームなので値は残る
+    expect(screen.getByLabelText('回数')).toHaveValue('10')
   })
 })

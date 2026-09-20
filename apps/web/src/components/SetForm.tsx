@@ -7,9 +7,15 @@ import { setFormSchema } from 'api/schema/set'
  * 検証には apps/api の Zod スキーマをそのまま渡している（Standard Schema 対応）。
  * サーバーと同じルールなので「クライアントは通るのにサーバーで 400」が起きない。
  */
+export type SetFormValues = { weightKg: string; reps: string; note: string }
+
 export function SetForm({
   onSubmit,
   isPending,
+  initial,
+  submitLabel = '記録する',
+  onCancel,
+  resetAfterSubmit = false,
 }: {
   onSubmit: (input: {
     weightKg: number
@@ -17,16 +23,24 @@ export function SetForm({
     note: string
   }) => Promise<unknown>
   isPending: boolean
+  /** 編集時の初期値。省略すると空のフォーム（新規追加）になる。 */
+  initial?: SetFormValues
+  submitLabel?: string
+  onCancel?: () => void
+  /** 新規追加時のみ true。送信後に回数とメモを消して連続入力しやすくする。 */
+  resetAfterSubmit?: boolean
 }) {
   const form = useForm({
-    defaultValues: { weightKg: '', reps: '', note: '' },
+    defaultValues: initial ?? { weightKg: '', reps: '', note: '' },
     validators: { onSubmit: setFormSchema },
     onSubmit: async ({ value, formApi }) => {
       const parsed = setFormSchema.parse(value)
       await onSubmit(parsed)
-      // 連続して入力するので、重量は残して回数とメモだけ消す
-      formApi.setFieldValue('reps', '')
-      formApi.setFieldValue('note', '')
+      if (resetAfterSubmit) {
+        // 同じ重量で複数セット組むので、重量は残して回数とメモだけ消す
+        formApi.setFieldValue('reps', '')
+        formApi.setFieldValue('note', '')
+      }
     },
   })
 
@@ -79,17 +93,28 @@ export function SetForm({
         )}
       </form.Field>
 
-      <form.Subscribe selector={(s) => s.isSubmitting}>
-        {(isSubmitting) => (
+      <div className="mt-5 flex gap-2">
+        <form.Subscribe selector={(s) => s.isSubmitting}>
+          {(isSubmitting) => (
+            <button
+              type="submit"
+              disabled={isSubmitting || isPending}
+              className="rounded-md bg-slate-900 px-4 py-2 font-medium text-sm text-white disabled:opacity-40 dark:bg-slate-100 dark:text-slate-900"
+            >
+              {submitLabel}
+            </button>
+          )}
+        </form.Subscribe>
+        {onCancel && (
           <button
-            type="submit"
-            disabled={isSubmitting || isPending}
-            className="mt-5 rounded-md bg-slate-900 px-4 py-2 font-medium text-sm text-white disabled:opacity-40 dark:bg-slate-100 dark:text-slate-900"
+            type="button"
+            onClick={onCancel}
+            className="rounded-md border border-slate-300 px-4 py-2 text-sm dark:border-slate-700"
           >
-            記録する
+            キャンセル
           </button>
         )}
-      </form.Subscribe>
+      </div>
     </form>
   )
 }

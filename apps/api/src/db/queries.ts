@@ -171,3 +171,62 @@ export async function getLastSets(
 
   return { ...last, sets: rows }
 }
+
+export async function getSet(db: Db, id: string) {
+  const [row] = await db.select().from(sets).where(eq(sets.id, id))
+  return row ?? null
+}
+
+export async function updateSet(
+  db: Db,
+  id: string,
+  input: { weightKg: number; reps: number; note?: string | null },
+) {
+  const [row] = await db
+    .update(sets)
+    .set({
+      weightKg: input.weightKg,
+      reps: input.reps,
+      note: input.note ?? null,
+    })
+    .where(eq(sets.id, id))
+    .returning()
+  return row ?? null
+}
+
+/**
+ * セットを削除し、同じワークアウト×種目の setOrder を 1 から詰め直す。
+ *
+ * 詰め直さないと 1,3 のような歯抜けになり、記録として不自然に見える。
+ * 件数が小さい（1種目あたい数セット）ので素直に順次 UPDATE する。
+ */
+export async function deleteSet(db: Db, id: string) {
+  const target = await getSet(db, id)
+  if (!target) return null
+
+  await db.delete(sets).where(eq(sets.id, id))
+
+  const rest = await db
+    .select({ id: sets.id })
+    .from(sets)
+    .where(
+      and(
+        eq(sets.workoutId, target.workoutId),
+        eq(sets.exerciseId, target.exerciseId),
+      ),
+    )
+    .orderBy(sets.setOrder, sets.id)
+
+  for (const [i, row] of rest.entries()) {
+    await db
+      .update(sets)
+      .set({ setOrder: i + 1 })
+      .where(eq(sets.id, row.id))
+  }
+
+  return target
+}
+
+export async function deleteWorkout(db: Db, id: string) {
+  await db.delete(workouts).where(eq(workouts.id, id))
+}

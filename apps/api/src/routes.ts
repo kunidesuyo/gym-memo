@@ -7,16 +7,23 @@ import {
   createExercise,
   createWorkout,
   deleteExercise,
+  deleteSet,
+  deleteWorkout,
   getExercise,
   getLastSets,
   getWorkout,
   listExercises,
   listWorkouts,
   updateExercise,
+  updateSet,
 } from './db/queries'
 import { idParamSchema } from './schema/common'
 import { exerciseQuerySchema, newExerciseSchema } from './schema/exercise'
-import { lastSetsQuerySchema, newSetSchema } from './schema/set'
+import {
+  lastSetsQuerySchema,
+  newSetSchema,
+  updateSetSchema,
+} from './schema/set'
 import { newWorkoutSchema } from './schema/workout'
 
 /**
@@ -140,6 +147,42 @@ export const routes = new Hono<{ Bindings: Env }>()
       return c.json(row, 201)
     },
   )
+
+  .delete(
+    '/api/workouts/:id',
+    zValidator('param', idParamSchema),
+    async (c) => {
+      const { id } = c.req.valid('param')
+      const db = createDb(c.env.DB)
+
+      const workout = await getWorkout(db, id)
+      if (!workout) return c.json({ error: 'workout not found' }, 404)
+
+      // ぶら下がるセットは FK の ON DELETE CASCADE で消える（D1 で動作確認済み）
+      await deleteWorkout(db, id)
+      return c.body(null, 204)
+    },
+  )
+
+  .patch(
+    '/api/sets/:id',
+    zValidator('param', idParamSchema),
+    zValidator('json', updateSetSchema),
+    async (c) => {
+      const { id } = c.req.valid('param')
+      const row = await updateSet(createDb(c.env.DB), id, c.req.valid('json'))
+      if (!row) return c.json({ error: 'set not found' }, 404)
+      return c.json(row)
+    },
+  )
+
+  .delete('/api/sets/:id', zValidator('param', idParamSchema), async (c) => {
+    const { id } = c.req.valid('param')
+    // 削除後に同じワークアウト×種目の setOrder を詰め直す
+    const removed = await deleteSet(createDb(c.env.DB), id)
+    if (!removed) return c.json({ error: 'set not found' }, 404)
+    return c.body(null, 204)
+  })
 
   .get(
     '/api/exercises/:id/last-sets',

@@ -39,6 +39,33 @@ export const workoutFixture: Workout = {
   sets: [],
 }
 
+/** 編集・削除のテスト用。既にセットが入っているセッション。 */
+export const workoutWithSetsFixture: Workout = {
+  id: WORKOUT_ID,
+  performedOn: '2026-09-20',
+  createdAt: '2026-09-20 09:00:00',
+  sets: [
+    {
+      id: 'set-1',
+      exerciseId: BENCH_ID,
+      exerciseName: 'ベンチプレス',
+      setOrder: 1,
+      weightKg: 60,
+      reps: 10,
+      note: null,
+    },
+    {
+      id: 'set-2',
+      exerciseId: BENCH_ID,
+      exerciseName: 'ベンチプレス',
+      setOrder: 2,
+      weightKg: 65,
+      reps: 8,
+      note: null,
+    },
+  ],
+}
+
 export const lastSetsFixture: LastSetsResult = {
   workoutId: '01a0bf19-0000-7000-8000-000000000009',
   performedOn: '2026-09-13',
@@ -108,6 +135,34 @@ export const handlers = [
 
   http.get('/api/exercises/:id/last-sets', () =>
     HttpResponse.json(lastSetsFixture),
+  ),
+
+  http.patch('/api/sets/:id', async ({ request, params }) => {
+    const body = (await request.json()) as {
+      weightKg: number
+      reps: number
+      note?: string | null
+    }
+    await delay(50)
+    return HttpResponse.json({
+      id: String(params.id),
+      workoutId: WORKOUT_ID,
+      exerciseId: BENCH_ID,
+      setOrder: 1,
+      createdAt: '2026-09-20 10:00:00',
+      ...body,
+      note: body.note ?? null,
+    })
+  }),
+
+  http.delete('/api/sets/:id', async () => {
+    await delay(50)
+    return new HttpResponse(null, { status: 204 })
+  }),
+
+  http.delete(
+    '/api/workouts/:id',
+    () => new HttpResponse(null, { status: 204 }),
   ),
 
   // 楽観的更新を観察できるよう、わざと応答を遅らせる
