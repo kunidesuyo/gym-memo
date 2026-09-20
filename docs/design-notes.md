@@ -1,0 +1,757 @@
+# gym-memo 設計メモ
+
+自分専用の筋トレ記録アプリ。技術学習が主目的。
+最終更新: 2026-09-20
+
+---
+
+## 1. 目的（優先順位つき）
+
+1. **TanStack 系フロントエンドライブラリを身につける**（Query / Form / Router）
+2. **Terraform で Cloudflare にデプロイする**（Terraform は書籍で学習中）
+3. 自分が実際にジムで使える記録アプリになる
+
+3 は「動機」であって目的ではない。迷ったら 1・2 の学習効果が高いほうを選ぶ。
+ただし 3 を捨てると続かないので、**「前回この種目を何kgで何回やったか」が見える**ところまでは必ず作る。
+
+---
+
+## 2. 決まっていること
+
+- ユーザーは自分ひとり
+- デプロイ先は Cloudflare
+- 最初はローカルで最小限動くところまで → そのあと Terraform でデプロイ
+- 技術選定の軸は「学習になるか」
+
+---
+
+## 3. 論点1: 構成 —— 【決定済み 2026-09-20】案C を採用
+
+### 決定
+
+**コード上はフロント/バックを分離し、本物の HTTP API を挟む。デプロイは Worker 1つ。**
+
+### 決め手
+
+「分離するか」は独立した2軸の問いだった。
+
+| 軸 | 問い | 学習への影響 |
+|---|---|---|
+| コードの境界 | フロントとサーバーの間に HTTP があるか | **大きい** |
+| デプロイ単位 | デプロイするものが1個か2個か | ほぼゼロ（苦労が増えるだけ） |
+
+世間の「フロント/バック分離」の動機（チーム分割・独立スケール・別リリースサイクル）は
+**ひとりのアプリには1つも存在しない**。一方コードの境界は TanStack Query の学習に直結する。
+よって「境界は作る、デプロイ単位は1つ」を選ぶ。
+
+加えて **Hono RPC を使ってみたかった** という動機が一致した。
+
+### 構成
+
+```
+gym-memo/
+├── apps/
+│   ├── web/                 # Vite + React（SPA）
+│   │   ├── src/routes/      # TanStack Router のファイルベースルート
+│   │   ├── src/api/         # fetch クライアント + useQuery/useMutation
+│   │   └── dist/            # ビルド成果物 → 静的アセットになる
+│   └── api/
+│       ├── src/index.ts     # Hono アプリ = Worker のエントリポイント
+│       ├── src/db/schema.ts # Drizzle スキーマ
+│       └── migrations/
+├── infra/                   # Terraform
+├── wrangler.jsonc
+└── package.json             # pnpm workspaces
+```
+
+### 1つの Worker が両方をまかなう仕組み
+
+`wrangler.jsonc`:
+
+```jsonc
+{
+  "name": "gym-memo",
+  "main": "apps/api/src/index.ts",
+  "assets": {
+    "directory": "./apps/web/dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application"
+  },
+  "d1_databases": [
+    { "binding": "DB", "database_name": "gym-memo", "database_id": "..." }
+  ]
+}
+```
+
+Worker 本体:
+
+```ts
+// apps/api/src/index.ts
+export default {
+  async fetch(request: Request, env: Env) {
+    const url = new URL(request.url)
+    if (url.pathname.startsWith('/api/')) return app.fetch(request, env)
+    return env.ASSETS.fetch(request)   // それ以外は React の SPA を返す
+  },
+}
+```
+
+リクエストの流れ:
+
+```
+/assets/index-abc123.js  → 静的ファイルあり → CDN が直接返す（Worker 起動せず・課金なし）
+/api/workouts/42         → Worker 起動 → Hono → D1 → JSON
+/workouts/42             → 静的ファイルなし → SPA フォールバックで index.html
+```
+
+⚠️ 静的アセットと Worker の評価順は `run_worker_first` 等で切り替わる。
+SPA フォールバックとの正確な優先順位は**実装時に最新ドキュメントで確認する**
+（Cloudflare が活発に更新している領域。古いブログ記事を信用しない）。
+
+### 開発時は2プロセス（本番は1つ）
+
+```
+wrangler dev   → :8787   Hono + ローカル D1。本番と同じ workerd ランタイムが動く
+vite dev       → :5173   React、HMR つき
+```
+
+```ts
+// apps/web/vite.config.ts
+server: { proxy: { '/api': 'http://localhost:8787' } }
+```
+
+Vite の proxy を通すので、**開発中も同一オリジン扱いで CORS が発生しない。**
+
+### 型安全は Hono RPC で担保する
+
+```ts
+// apps/api/src/index.ts
+const routes = app.get('/api/workouts/:id', ...).post('/api/workouts/:id/sets', ...)
+export type AppType = typeof routes
+
+// apps/web 側
+import { hc } from 'hono/client'
+import type { AppType } from '../../api/src/index'
+export const api = hc<AppType>('/')   // ← コード生成なしで型がつく
+```
+
+Hono のルート定義から型を推論した fetch クライアントが手に入る。
+**フルスタックFW のサーバー関数と同等の型安全を、HTTP を隠さないまま得られる。**
+
+### 不採用にした案
+
+**案A: TanStack Start（フルスタックFW）** — 型安全と手軽さは魅力だが **SSR がついてくる**。
+自分しか開かないアプリに SSR の価値はゼロなのに、hydration ミスマッチや Workers 上の
+ランタイム差異は普通に降ってくる。払うコストにリターンがない。Hono RPC で型安全が
+埋まるので、案Aを選ぶ理由は「Start 自体を学びたい」場合のみ。→ それは別プロジェクトで。
+
+**案B: 完全分離（Worker 2つ）** — 別オリジンになるため CORS・プリフライト・Cookie の
+`SameSite` と開発中も本番も戦い続ける。その苦労が TanStack にも Terraform にも変換されない。
+
+## 4. 技術スタック —— 【確定 2026-09-20】
+
+```
+┌─ apps/web ─────────────────────────────────────┐
+│  React 19                                       │
+│  TanStack Router    ルーティング（学習目標）       │
+│  TanStack Query     サーバー状態（学習目標・主役） │
+│  TanStack Form      フォーム（学習目標）          │
+│  Zod                バリデーション                │
+│  Tailwind CSS v4    スタイル                     │
+│  Vite               ビルド / 開発サーバー          │
+└────────────────────┬───────────────────────────┘
+                     │  hc<AppType> で型付き fetch
+┌────────────────────▼───────────────────────────┐
+│  apps/api                                       │
+│  Hono               ルーティング                  │
+│  @hono/zod-validator 入力検証 + RPC の型に反映    │
+│  Drizzle ORM        クエリ / スキーマ定義         │
+└────────────────────┬───────────────────────────┘
+                     │  D1 binding
+┌────────────────────▼───────────────────────────┐
+│  Cloudflare D1 (SQLite)                         │
+└─────────────────────────────────────────────────┘
+
+共通基盤:  TypeScript / pnpm workspaces / Wrangler / Biome
+```
+
+### 選定理由
+
+| 選択 | 理由 |
+|---|---|
+| **pnpm workspaces のみ**（Turborepo なし） | パッケージ2個にタスクオーケストレータは過剰。遅くなってから足す |
+| **`packages/shared` を作らない** | Hono RPC の `AppType` と Drizzle の推論型で型は足りる |
+| **Zod** | 1つのスキーマが Hono 検証 / TanStack Form 検証 / TS 型の3か所で働く |
+| **Drizzle ORM** | D1 公式サポート。マイグレーションが SQL 出力なので Wrangler の流れに乗る |
+| **Tailwind CSS v4** | ジムでスマホから使う = モバイル UI を速く回す必要。v4 は Vite プラグインのみで動く |
+| **shadcn/ui を入れない** | Radix 依存とコンポーネント管理が乗る。学習目標から外れる。後から足せる |
+| **Biome** | ESLint+Prettier+flat config の設定コストを回避。lint 設定は学習目標ではない |
+| **テストは 1-a から入れる** | 11章参照。テスト基盤自体の検証を最初に済ませる |
+
+### ⚠️ Zod スキーマ配置の規律
+
+`apps/web` が `apps/api` からスキーマを import するため、
+**スキーマを置くファイルには Drizzle / D1 を import しないこと。**
+混ざるとサーバー専用コードがフロントのバンドルに入る。
+
+→ `apps/api/src/schema/` を「純粋な Zod だけ」の領域として分離する。
+
+```ts
+// apps/api/src/schema/set.ts —— サーバー・クライアント両方から import
+export const newSetSchema = z.object({
+  exerciseId: z.number(),
+  weightKg:   z.number().positive(),
+  reps:       z.number().int().positive(),
+})
+
+// ① Hono の入力検証    app.post('/api/sets', zValidator('json', newSetSchema), ...)
+// ② TanStack Form      useForm({ validators: { onChange: newSetSchema } })
+// ③ TypeScript の型    type NewSet = z.infer<typeof newSetSchema>
+```
+
+### インストールする依存関係
+
+```
+[root]      wrangler, typescript, @biomejs/biome, vitest
+[apps/api]  hono, @hono/zod-validator, zod, drizzle-orm
+            (dev) drizzle-kit, @cloudflare/vitest-pool-workers
+[apps/web]  react, react-dom
+            @tanstack/react-router, @tanstack/react-router-devtools, @tanstack/router-plugin
+            @tanstack/react-query, @tanstack/react-query-devtools
+            @tanstack/react-form
+            zod
+            (dev) vite, @vitejs/plugin-react, tailwindcss, @tailwindcss/vite
+            (dev) jsdom, msw, @testing-library/react,
+                  @testing-library/jest-dom, @testing-library/user-event
+```
+
+バージョンは手書きせず `pnpm add` で解決させる。
+TanStack Router / Form と Tailwind v4 は **API が新しく変化もあった領域**なので、
+導入時に公式ドキュメントの現行版を確認する。
+
+### 検討して却下した選択肢
+
+| 選択肢 | 却下理由 |
+|---|---|
+| Next.js | Cloudflare では OpenNext アダプタ経由。層が増える |
+| TanStack Start | 論点1で決着。SSR が不要 |
+| Turborepo | パッケージ2個には過剰 |
+| Prisma | D1 対応の層が厚い。バンドルも重い |
+| **Kysely** | 下記 |
+| shadcn/ui | 学習目標から外れる |
+| ESLint + Prettier | 設定コストが学習の邪魔 |
+| Neon / Turso | D1 で足りる。外部サービスが増える |
+
+### Drizzle vs Kysely（検討記録）
+
+根本の違いは **「何がスキーマの正か」**。
+
+| | Drizzle | Kysely |
+|---|---|---|
+| 分類 | ORM | 型安全な SQL クエリビルダ |
+| スキーマの正 | **TS のスキーマ定義** | **DB そのもの**（TS はそれを写した宣言） |
+| DB を作れるか | ✅ マイグレーション生成 | ❌ 既にある前提 |
+| マイグレーション | 差分から SQL を自動生成 | **実行の仕組みはある。生成がない**（手書き、Rails/Django 流儀） |
+| D1 | 公式サポート | `kysely-d1`（コミュニティ製） |
+| クエリ | `with` でネスト結果。簡潔 | `jsonArrayFrom` 等で明示的。SQL が読める |
+
+**手書きマイグレーションは劣っているわけではない。** 自動生成の弱点は例えばカラムのリネームで、
+差分からは `DROP + ADD`（データ消失）にも見えてしまう。drizzle-kit は対話的に確認するが、
+推測である以上この曖昧さは原理的に残る。→ **自動化と明示性のトレードオフ**。
+
+**今回 Drizzle を選ぶ決め手は生成の有無ではなく**:
+> Drizzle は出力が SQL ファイルなので `wrangler d1 migrations apply` にそのまま乗る。
+> Kysely の Migrator は TS を実行する仕組みで、Workers 上の D1 に対しては流れから外れる。
+
+論点2で「マイグレーションは Wrangler の担当」と決めた以上、ここが噛み合うかが効く。
+
+Kysely が勝つ場面: 既存 DB を自分で管理しない / 複雑な SQL を多用する / 抽象化を挟みたくない。
+→ 今回はグリーンフィールドで、最も複雑なクエリでも「前回この種目でやったセット」程度。
+
+**Drizzle の粗さ（承知の上で選ぶ）**:
+- リレーショナルクエリ API は大きな設計変更を経ており、**ネット記事が新旧混在**。公式の現行版を見る
+- 型エラーのメッセージが難解になることがある
+- `drizzle-kit` のスナップショットがズレると想定外の差分が出ることがある
+- 逃げ道: Drizzle でも `sql` テンプレートで生 SQL が書けるので行き止まりにはならない
+
+## 5. 論点2: Terraform の守備範囲 —— 【決定済み 2026-09-20】Wrangler 中心 + Terraform は Access
+
+### 前提の訂正
+
+当初「D1 本体は Terraform で作る」と書いていたが **撤回した**。理由は下記。
+
+### 出発点: Cloudflare のベストプラクティスは Wrangler 中心
+
+Cloudflare の公式ドキュメント・チュートリアル・テンプレートに Terraform はほぼ登場しない。
+これは手抜きではなく設計思想。**`wrangler.jsonc` 自体が既に IaC** だから。
+
+```jsonc
+{ "d1_databases": [{ "binding": "DB", "database_name": "gym-memo", "database_id": "..." }] }
+```
+
+Git にコミットでき、レビューでき、`wrangler deploy` で収束する。
+「宣言 → 収束」という Terraform と同じ仕事をしている。
+
+つまり **Worker とそれに紐づくリソースについては、道具が被っている**。
+そこに Terraform を重ねると二重管理の摩擦（`database_id` の受け渡し等）が構造的に発生する。
+
+### 境界線
+
+> **Terraform は Cloudflare「アカウント」を管理する。Wrangler は「アプリケーション」を管理する。**
+
+| 対象 | 担当 |
+|---|---|
+| ゾーンの設定（SSL モード等） | Terraform |
+| **Access アプリケーション + ポリシー** | **Terraform ← 主戦場** |
+| Worker のコード・アセット | Wrangler |
+| **D1 データベース本体** | **Wrangler**（`wrangler d1 create` 一発、id は不変） |
+| D1 のスキーマ/マイグレーション | Drizzle + Wrangler |
+| Worker の Custom Domain / DNS | Wrangler（`wrangler.jsonc` の `routes` に書ける） |
+| シークレットの値 | `wrangler secret put` |
+
+### 検討した3つの道
+
+- **道1**: Wrangler だけで完結。Terraform は AWS/GCP の別題材で学ぶ
+- **道2**: Wrangler 中心 + Terraform は本当に Terraform の仕事だけ ← **採用**
+- **道3**: 全部 Terraform に寄せる → **却下**
+
+**採用理由**: 書く HCL の量は少ないが 100% 本物の使い方。
+Zero Trust ポリシーを Terraform で管理するのは実務の一般的プラクティス。
+**量を水増しするために不自然な使い方をするのは学習として逆効果。**
+Terraform で身につけるべきは HCL の行数ではなく、state という概念・import・
+plan で確認してから apply する運用感覚であり、これらは Access と DNS だけで全部学べる。
+
+さらに道2は「Terraform とは何を管理するための道具か」という判断力が身につく。
+これは全部 Terraform に押し込んだら絶対に学べない。
+
+### 正直な前提
+
+**Cloudflare は Terraform を学ぶ題材としては相性が良くない。** これは事実として認めた上で道2を選ぶ。
+
+また Cloudflare provider は v5 で OpenAPI スキーマからの自動生成に作り直された経緯があり、
+ドキュメントの粗さや挙動の癖が報告されている。
+→ **詰まったとき「Terraform を理解していない」のか「provider の問題」なのかを切り分ける。**
+不自然に消耗したら手動設定に切り替える判断も持っておく。
+
+### セキュリティ上の注意
+
+- API トークンは Global API Key ではなく**スコープ付きトークン**を作り、
+  `CLOUDFLARE_API_TOKEN` 環境変数で渡す（`.gitignore` に `*.tfvars` 済み）
+- **`terraform.tfstate` は平文 JSON**。渡した変数の値がそのまま残る
+  → アプリのシークレットは Terraform 経由にせず `wrangler secret put` で直接入れる
+
+### state の置き場所
+
+- フェーズ2: ローカル state（ひとりなので競合しない）
+- フェーズ3: R2 backend（`backend "s3"`）。`skip_*` フラグが複数必要で
+  チェックサム周りの追加フラグが要る場合もある → **最初にやると本筋を見失う**ので後回し
+
+### このプロジェクトで学べる Terraform 概念
+
+1. provider の設定と認証（スコープ付きトークン）
+2. **state の概念**
+3. variable / output / tfvars
+4. リソース間の暗黙の依存
+5. **`resource` と `data` の区別** — ゾーンは既に存在する。管理したいのか読みたいだけなのか
+6. **`import`** — Terraform 1.10.5 なので `import` ブロックが使える（plan で確認してから取り込める）。
+   実務最頻出なのに入門書では流されがち。**今回の隠れた当たり**
+7. backend の移行（local → R2）
+
+## 6. 論点3: 「自分だけが使う」をどう実現するか —— 【一部決定 2026-09-20】
+
+### 決定済み: 独自ドメインを買う / Cloudflare Registrar を使う
+
+これが論点2と論点3を同時に解く分岐点だった。
+ドメインがないとゾーンも DNS も Access も存在しないため、Terraform の出番も消滅する。
+
+- **レジストラ: Cloudflare Registrar** — 原価販売（`.com` で年 $10 程度）。
+  購入と同時にゾーン作成と NS 設定まで完了する。`.jp` など一部 TLD は非対応
+- **TLD: `.dev` または `.app` を推奨**（後述）。`.com` でも可
+
+### なぜ `.dev` / `.app` か —— HSTS プリロード
+
+HTTPS には「最初の一回」の穴がある。ブラウザは歴史的にまず `http://` を試すため、
+サーバーが HTTPS へリダイレクトするまでの往復が平文で流れる（**SSL ストリッピング攻撃**の隙）。
+
+**HSTS** (`Strict-Transport-Security` ヘッダ) は「今後このドメインは必ず HTTPS」と
+ブラウザに記憶させる仕組み。ただし **初回アクセスだけは保護されない**（TOFU 問題）。
+
+**HSTS preload list** はブラウザ本体に焼き込まれたドメインリストで、
+載っていれば初回から HTTPS 強制。通常は hstspreload.org への申請が必要。
+
+**`.dev` と `.app` は Google 運営の TLD で、TLD 丸ごと preload されている。**
+→ 買った瞬間、申請も設定もなしに **HTTP では物理的にアクセスできない**。
+
+個人開発に向く理由:
+1. HTTPS 周りの設定ミスが事故にならない（http のリクエストがそもそも来ない）
+2. Cookie を `Secure` 前提で考えられる（Access の認証 Cookie 含む）
+3. `.com` より名前が空いている
+
+⚠️ 昔の「`myapp.dev` を /etc/hosts に書くローカル開発」は使えない。
+今回はローカルが `localhost:5173` なので影響なし。
+
+### 前提知識メモ: ゾーン / DNS / プロキシ
+
+- **ゾーン** = 1つのドメインについて DNS の回答責任を持つ管理単位。
+  Cloudflare では「登録した1ドメイン = 1ゾーン」。**Zone ID** が API/Terraform での識別子。
+  SSL 設定・WAF・キャッシュ・Access はゾーン単位で効く
+- **プロキシ ON/OFF（オレンジ雲/グレー雲）** = トラフィックが Cloudflare を通るかどうか。
+  **WAF・キャッシュ・Access が効くのはプロキシ ON のときだけ**（通らないものは制御できない）。
+  Worker はエッジで動くので常にプロキシ ON 相当
+
+### 認証方式: Cloudflare Access（Zero Trust）
+
+アプリの手前、Cloudflare のエッジで認証する。
+
+```
+① 未認証リクエストが gym.<domain> に来る
+② エッジが Worker に届く「前に」止める        ← ここが肝
+③ ログイン画面へリダイレクト（Google / GitHub / メールへワンタイムPIN）
+④ 認証成功 → CF_Authorization Cookie（JWT）を発行
+⑤ 以降はエッジで Cookie を検証して通過
+⑥ Worker には Cf-Access-Jwt-Assertion ヘッダ付きで届く
+```
+
+**リクエストは Worker に到達しない → アプリに認証コードを1行も書かなくていい。**
+
+設定の構造:
+
+```
+Access アプリケーション   「gym.<domain> を保護する」宣言
+        └─ Access ポリシー  「誰を通すか」→ include: email = 自分のアドレス / decision: allow
+```
+
+- ID プロバイダは **One-time PIN（メールに6桁コード）なら IdP 設定すら不要**。最初はこれ
+- 無料プランで一定人数まで使える。個人利用ならコストなし
+- ⚠️ provider v5 で Access 関連のリソース構造が変わっている（ポリシーがアカウントスコープ化など）。
+  **必ず Terraform Registry の v5 ドキュメントを一次情報として引くこと**
+
+### Worker をホスト名に紐づける方法
+
+- **Custom Domain**（推奨・新しい）— Worker に直接ホスト名を割り当て、DNS レコードは Cloudflare が自動生成。
+  `wrangler.jsonc` に書ける: `"routes": [{ "pattern": "gym.<domain>", "custom_domain": true }]`
+- Routes（旧）— パターンで振る。DNS レコードを自分で用意する必要がある
+
+### 不採用
+
+- **自前セッション認証**（パスワード / Passkey）— ドメイン不要だが学習目標に乗らない。
+  ひとり用アプリにパスワード管理を実装するのはオーバーヘッド
+- **認証なし・URL を秘密にする** — 対策ではない。却下
+
+### 未決（論点3の残り）
+
+- [ ] ドメイン名を決める
+- [ ] `.dev` / `.app` / `.com` のどれにするか
+- [ ] Worker 側で `Cf-Access-Jwt-Assertion` を検証するか（エッジバイパス対策。最初は不要）
+- [ ] IdP は One-time PIN で始めるか、最初から Google にするか
+
+**フェーズ1（ローカル）では認証は一切実装しない。** デプロイ直前に決めれば間に合う。
+
+## 7. データモデル（たたき台）
+
+```
+exercises        種目マスタ
+  id, name, muscle_group, created_at
+
+workouts         1回のトレーニングセッション
+  id, performed_at, note
+
+sets             1セットの記録（このアプリの主役テーブル）
+  id, workout_id, exercise_id, set_order,
+  weight_kg, reps, rpe, note
+```
+
+**最重要クエリ**: 種目を選んだとき「前回この種目でやった全セット」を返す。
+これが出るかどうかでアプリの価値が決まる。TanStack Query のキャッシュ設計も、
+まずこのクエリを中心に考える。
+
+集計・グラフは後回し。まず記録できること、前回が見えること。
+
+---
+
+## 8. 進め方
+
+### フェーズ1: ローカルで最小限（認証なし・デプロイなし）
+
+**1-a: 骨組みと疎通** —— ✅ **完了 2026-09-20**（詳細は12章）
+- [x] pnpm workspaces、Vite + React、Hono Worker
+- [x] `/api/health` を Hono RPC 経由で叩き、**型がついた**レスポンスを画面に出す
+- [x] テスト基盤: `apps/api` に vitest-pool-workers、`apps/web` に jsdom + testing-library + MSW
+
+**1-b: D1 + Drizzle**
+- [ ] スキーマ定義、`drizzle-kit generate`、`wrangler d1 migrations apply --local`
+- [ ] 種目マスタの固定シード
+- [ ] テストに `applyD1Migrations` を追加、Drizzle クエリのテストを書く
+
+**1-c: ドメイン実装**
+- [ ] TanStack Router / Query / Form
+- [ ] ワークアウト作成 → 種目選択 → セット記録 → 一覧
+- [ ] **「前回の記録」表示**（このアプリの存在理由）
+- [ ] フロントのコンポーネントテストを本格化
+- **完了条件: 1回分の記録が最後まで入れられる**
+
+### フェーズ2: Terraform で Cloudflare へ
+- [ ] （決めたら）ドメイン取得・Cloudflare へ移管
+- [ ] Terraform で D1 本番・Worker・DNS を作る
+- [ ] Wrangler でコードデプロイ、マイグレーション適用
+- [ ] Cloudflare Access を Terraform で設定、自分だけ許可
+- **完了条件: ジムでスマホから記録できる**
+
+### フェーズ3: 実用と学習の上積み
+- [ ] PWA 化・オフライン対応（ジムは電波が悪い。TanStack Query の真骨頂）
+- [ ] GitHub Actions で CI/CD
+- [ ] Terraform state を R2 に
+- [ ] 記録のグラフ化
+
+---
+
+## 9. 次に決めること
+
+1. ~~ドメインを買うか~~ → **買う / Cloudflare Registrar**（決定 2026-09-20）
+2. ドメイン名と TLD（`.dev` / `.app` 推奨）
+3. モノレポツール（pnpm workspaces で十分か、Turborepo まで入れるか）
+4. フェーズ1 のスコープ（種目マスタは固定シード、RPE・メモ・グラフは後回し、認証なし）
+
+## 10. 決定ログ
+
+| 日付 | 論点 | 決定 |
+|---|---|---|
+| 2026-09-20 | 論点1: 構成 | 案C（論理分離 / 物理1 Worker）。型安全は Hono RPC |
+| 2026-09-20 | 論点2: Terraform | 道2（Wrangler 中心 + Terraform は Access 中心）。D1 も Wrangler 管理に訂正 |
+| 2026-09-20 | 論点3: ドメイン | 買う。Cloudflare Registrar。TLD は `.dev`/`.app` 推奨 |
+| 2026-09-20 | 論点3: 認証 | Cloudflare Access（One-time PIN で開始） |
+| 2026-09-20 | 技術スタック | 確定（4章）。ORM は Drizzle、Kysely は検討の上で却下 |
+| 2026-09-20 | テスト | 1-a から導入（11章）。「フェーズ1では入れない」を撤回 |
+| 2026-09-20 | 実装 | **1-a 完了**（12章）。疎通・型貫通・テスト基盤すべて実測で確認 |
+
+## 11. テスト戦略 —— 【決定 2026-09-20】
+
+### 方針: 1-a から入れる
+
+当初「フェーズ1では入れない」としていたが **撤回**。
+テストの目的は「コードの検証」だけでなく **「テスト基盤そのものが動くことの確認」** がある。
+
+1-b で「D1 + Drizzle + マイグレーション + テスト基盤」を同時に入れると、
+失敗したとき新しい要素が4つあって切り分けられない。
+**1-a なら変数がテスト設定だけ**なので、ここで済ませるほうが順番として正しい。
+
+### 3種類に分けて考える
+
+| | ツール | 今回の扱い |
+|---|---|---|
+| ① 純粋ロジックのユニットテスト | Vitest (node) | 必要になったら書く（フェーズ1にはほぼ対象が無い） |
+| ② **Worker の統合テスト** | `@cloudflare/vitest-pool-workers` | **主力**。1-a から |
+| ③ フロントのコンポーネントテスト | Vitest + jsdom + testing-library + MSW | 1-a から基盤だけ、1-c で本格化 |
+| ④ E2E | Playwright | フェーズ3で検討 |
+
+### ② Worker 統合テストの仕組み
+
+普通の Vitest は Node で動くため `c.env.DB`（Cloudflare が注入する D1 バインディング）が存在せず、
+モックするしかない → **「Drizzle が正しい SQL を吐いているか」を検証できない**。
+さらに workerd は Node と別ランタイムなので、Node で通っても本番で落ちうる。
+
+`@cloudflare/vitest-pool-workers` は Vitest の **pool**（テストの実行場所）を差し替え、
+**workerd の中でテストを走らせる**。内部は Miniflare = `wrangler dev` と同じ基盤。
+
+2つの書き方:
+
+```ts
+// ① ユニット寄り —— 関数を直接呼び、バインディングだけ借りる
+import { env } from 'cloudflare:test'
+const db = drizzle(env.DB)          // 本物の D1（ローカル SQLite）
+const result = await getLastSets(db, exerciseId)
+
+// ② 統合寄り —— Worker 全体にリクエストを打つ
+import { SELF } from 'cloudflare:test'
+const res = await SELF.fetch('https://x/api/sets', { method: 'POST', body: ... })
+// → /api 振り分け → Hono → zValidator → Drizzle → D1 の全経路が実際に走る。モックゼロ
+```
+
+**`isolatedStorage`**: 各テストの D1 書き込みがテスト終了時に自動ロールバックされる。
+`beforeEach` での後始末が不要。テストの順序依存も起きない。
+
+**D1 マイグレーションの適用**（1-b で追加）:
+
+```ts
+// vitest.config.ts
+import { defineWorkersConfig, readD1Migrations } from '@cloudflare/vitest-pool-workers/config'
+const migrations = await readD1Migrations('./migrations')
+export default defineWorkersConfig({
+  test: {
+    setupFiles: ['./test/setup.ts'],
+    poolOptions: { workers: {
+      wrangler: { configPath: '../../wrangler.jsonc' },   // 本番と同じ設定を読む
+      miniflare: { bindings: { TEST_MIGRATIONS: migrations } },
+    }},
+  },
+})
+
+// test/setup.ts
+import { applyD1Migrations, env } from 'cloudflare:test'
+await applyD1Migrations(env.DB, env.TEST_MIGRATIONS)
+```
+
+制約: workerd 内で走るので **Node 専用のテストユーティリティは使えない**（`fs` を触るもの等）。
+
+### ③ フロントのテスト
+
+**MSW** で fetch をネットワーク層で差し替える。コンポーネントからは本物の API に見えるので、
+TanStack Query のキャッシュ・再取得の挙動をそのまま検証できる（Query 公式も推奨）。
+
+⚠️ **MSW のモックは本物の API と型が一致している保証がない。**
+API を変えてモックを直し忘れると、テストは通るのに本番が壊れる。
+→ モック定義に `z.infer<typeof ...>` を付け、ズレたらコンパイルエラーにする。
+
+### ② と ③ は同居できない → パッケージを分けてあるので問題ない
+
+`vitest-pool-workers`（workerd）と jsdom（Node）は同じ Vitest 実行に同居できない。
+今回は `apps/api` と `apps/web` が別パッケージなので、それぞれが自分の設定を持てば衝突しない。
+
+```
+apps/api/vitest.config.ts   → defineWorkersConfig（workerd）
+apps/web/vitest.config.ts   → environment: 'jsdom'
+```
+
+ルートから `pnpm -r test` で両方走る。**モノレポ構成がここで効く。**
+
+### ローカル実行環境について（確認済み）
+
+`wrangler dev` もテストも **完全にローカル。Cloudflare への通信ゼロ、課金ゼロ、Docker 不要。**
+
+```
+wrangler dev / vitest → workerd（npm 経由のネイティブバイナリ）
+                      → Miniflare（バインディングを再現）
+                      → SQLite（workerd 内蔵）
+```
+
+- データの置き場所: `.wrangler/state/v3/d1/*.sqlite`（`.gitignore` 済み）。消せば初期化
+- **`wrangler dev` のデータは永続。テストは隔離領域 → テストを走らせても開発データは壊れない**
+- 中身の確認: `wrangler d1 execute gym-memo --local --command "SELECT ..."`
+- Testcontainers のような Docker 依存がないので起動が速く、CI も楽。**オフラインで開発できる**
+
+⚠️ **ローカルで再現されないもの**: Cloudflare Access（認証）、
+本番 D1 の制限（クエリタイムアウト・行数上限・DB サイズ）、読み取りレプリカの結果整合性、Time Travel。
+
+⚠️ **`--local` の付け忘れに注意**（付けないと本番 D1 に流れる）。
+`package.json` の scripts に `db:migrate:local` のような名前で固めて事故を防ぐ。
+
+## 12. 実装ログ: 1-a（骨組みと疎通）—— 完了 2026-09-20
+
+### 確定した実際のバージョン
+
+| | |
+|---|---|
+| TypeScript | 7.0.2（Go 実装のネイティブ版） |
+| Vite | 8.3.0 / Vitest 4.1.11 |
+| React | 19.3.0 |
+| Hono | 4.13.8 / Zod 4.6.5 |
+| Tailwind CSS | 4.3.3 |
+| Wrangler | 4.135.0 / workerd 1.20260918.1 |
+| @cloudflare/vitest-pool-workers | 0.22.0 |
+
+### 疎通検証の結果（全て実測で確認済み）
+
+| # | 確認項目 | 結果 |
+|---|---|---|
+| ① | `wrangler dev` 直叩き `:8787/api/health` | JSON が返る |
+| ② | Vite proxy 経由 `:5180/api/health` | 同じ JSON（= CORS なしで繋がる） |
+| ③ | `:5180/` が SPA を返す | `<title>gym-memo</title>` |
+| ④ | `wrangler` 単体で静的アセットも返す（本番と同じ形） | 返る |
+| ⑤ | SPA フォールバック `/workouts/42` | 200 |
+| ⑥ | 未定義 API `/api/unknown` | 404 |
+
+**Hono RPC の型が通っていることも実証済み**: `data.statuss` と書くと
+`Property 'statuss' does not exist on type '{ status: string; runtime: string; time: string; }'`、
+MSW のモックに余分なキーを足すとこちらもコンパイルエラーになる。
+→ **API のルート定義 → 画面 → テストのモック** まで1本の型が貫通している。
+
+### ハマりどころ（実際に踏んだもの）
+
+**1. `@cloudflare/vitest-pool-workers` v0.22 で設定 API が変わっていた**
+
+Vitest 4 対応で `defineWorkersConfig` が廃止され、**Vite プラグイン方式**になった。
+`/config` サブパス自体が exports から消えている。
+
+```ts
+// ❌ 旧（ネット上の記事はほぼこれ）
+import { defineWorkersConfig } from '@cloudflare/vitest-pool-workers/config'
+export default defineWorkersConfig({ test: { poolOptions: { workers: { ... } } } })
+
+// ✅ 新
+import { cloudflareTest } from '@cloudflare/vitest-pool-workers'
+import { defineConfig } from 'vitest/config'
+export default defineConfig({ plugins: [cloudflareTest({ wrangler: { configPath: '...' } })] })
+```
+
+パッケージに `dist/codemods/vitest-v3-to-v4.mjs` が同梱されており、**それを読んで移行方法を特定した**。
+`readD1Migrations` もルート export に移っている（1-b で使う）。
+
+**2. compatibility_date の上限がテストと本番で違う**
+
+vitest-pool-workers が同梱する workerd（miniflare 5.20260815.0-alpha）は
+`wrangler` 同梱の workerd より古く、当初指定した `2026-09-18` を拒否した。
+→ **両方が受け付ける `2026-08-22` に合わせた。**
+`This Worker requires compatibility date "X", but the newest date supported by this server binary is "Y"` が出たらこれ。
+
+**3. `SELF` / `env` (`cloudflare:test`) は非推奨になっている**
+
+型定義上は `import { env, exports } from "cloudflare:workers"` が推奨。
+ただし `wrangler types` が `Cloudflare.Exports` を生成しないため、現状は `SELF` を使用。
+→ **1-b 以降で新 API に移行できるか再確認する（積み残し）。**
+
+**4. web が api のソースを型検査してしまう**
+
+`apps/web` が `AppType` を import すると、tsc が api のソースまで辿り、
+Worker グローバル（`Env` / `ExportedHandler`）が解決できず失敗した。
+
+対処を2段構えにした:
+- **ルート定義を Worker エントリから分離**（`src/routes.ts` と `src/index.ts`）。
+  `apps/api/package.json` の `exports` に `"./routes"` を追加し、
+  web は `import type { AppType } from 'api/routes'` として**エントリを読まない**
+- それでも `Env` は要るので、`apps/web/tsconfig.json` の `include` に
+  `../../worker-configuration.d.ts` を追加。**DOM 型との衝突は実測で無し**
+
+⚠️ トレードオフ: web 側から Worker のグローバル型が見えてしまう。
+`worker-configuration.d.ts` は生成物だが、**コミットする**（Cloudflare 推奨）。
+そうしないと clone 直後の `pnpm typecheck` が落ちる。再生成は `pnpm types`。
+
+**5. Vite の既定ポート 5173 が他プロジェクトと衝突していた**
+
+別プロジェクトの Vite が 5173 を占有しており、こちらは黙って 5174 にずれていた。
+proxy 先とのズレは原因が分かりにくいので、**専用ポート 5180 + `strictPort: true`** を明示。
+
+**6. 細かいもの**
+- pnpm 10 はビルドスクリプトをブロックする → `pnpm-workspace.yaml` の
+  `onlyBuiltDependencies` に `esbuild` / `workerd` / `msw` を列挙
+- CSS の副作用 import（`import './index.css'`）には `"types": ["vite/client"]` が要る
+- Biome 2.x で `linter.rules.recommended` は非推奨 → `linter.rules.preset: "recommended"`
+
+### `run_worker_first` の確認結果（論点1の積み残し）
+
+同梱の `node_modules/wrangler/config-schema.json` を直接読んで確認した。
+**文字列配列または boolean を受け付ける**（negative rules も可）。
+
+```jsonc
+"assets": {
+  "directory": "./apps/web/dist",
+  "binding": "ASSETS",
+  "not_found_handling": "single-page-application",
+  "run_worker_first": ["/api/*"]
+}
+```
+
+`/api/*` だけが Worker に回り、それ以外はアセット配信 + SPA フォールバック。
+ただし Worker 側にも `env.ASSETS.fetch()` のフォールバックを残し、
+**Worker 単体でも正しく振る舞えるように**してある。
+
+### コマンド
+
+```bash
+pnpm dev          # wrangler dev (:8787) と vite (:5180) を並列起動
+pnpm test         # 両パッケージのテスト
+pnpm typecheck    # 両パッケージの型検査
+pnpm build        # web を dist へビルド
+pnpm check        # Biome
+pnpm types        # wrangler types の再生成（wrangler.jsonc を変えたら実行）
+```
+
