@@ -13,6 +13,40 @@ export const newSetSchema = z.object({
 
 export type NewSet = z.infer<typeof newSetSchema>
 
+/** セット入力（種目は画面側の select が持つので除く）。 */
+export const setInputSchema = newSetSchema.omit({ exerciseId: true })
+
+export type SetInput = z.infer<typeof setInputSchema>
+
+/**
+ * フォーム入力用。<input> からは文字列で届くので、
+ * 「空でないこと」を見てから数値に変換する。
+ * TanStack Form の検証にそのまま渡せる（Standard Schema 対応）。
+ */
+export const setFormSchema = z.object({
+  weightKg: z
+    .string()
+    .min(1, '重量を入力してください')
+    .transform(Number)
+    .pipe(
+      z
+        .number('数値で入力してください')
+        .nonnegative('0以上で入力してください')
+        .max(1000, '重量が大きすぎます'),
+    ),
+  reps: z
+    .string()
+    .min(1, '回数を入力してください')
+    .transform(Number)
+    .pipe(
+      z
+        .number('数値で入力してください')
+        .int('整数で入力してください')
+        .positive('1以上で入力してください')
+        .max(1000, '回数が大きすぎます'),
+    ),
+})
+
 /** 「前回の記録」取得時、記録中のワークアウト自身を除外するためのクエリ。 */
 export const lastSetsQuerySchema = z.object({
   excludeWorkoutId: z.coerce.number().int().positive().optional(),

@@ -6,6 +6,20 @@ export function listExercises(db: Db) {
   return db.select().from(exercises).orderBy(exercises.id)
 }
 
+/** セッション一覧（新しい順）。セット数を添えて一覧表示に使う。 */
+export function listWorkouts(db: Db) {
+  return db
+    .select({
+      id: workouts.id,
+      performedOn: workouts.performedOn,
+      setCount: sql<number>`count(${sets.id})`,
+    })
+    .from(workouts)
+    .leftJoin(sets, eq(sets.workoutId, workouts.id))
+    .groupBy(workouts.id)
+    .orderBy(desc(workouts.performedOn), desc(workouts.id))
+}
+
 export async function createWorkout(db: Db, performedOn: string) {
   const [row] = await db.insert(workouts).values({ performedOn }).returning()
   // INSERT ... RETURNING は必ず1行返す。ここで潰しておかないと

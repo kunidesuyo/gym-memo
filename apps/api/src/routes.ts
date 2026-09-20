@@ -7,6 +7,7 @@ import {
   getLastSets,
   getWorkout,
   listExercises,
+  listWorkouts,
 } from './db/queries'
 import { idParamSchema } from './schema/common'
 import { lastSetsQuerySchema, newSetSchema } from './schema/set'
@@ -30,6 +31,11 @@ export const routes = new Hono<{ Bindings: Env }>()
 
   .get('/api/exercises', async (c) => {
     const rows = await listExercises(createDb(c.env.DB))
+    return c.json(rows)
+  })
+
+  .get('/api/workouts', async (c) => {
+    const rows = await listWorkouts(createDb(c.env.DB))
     return c.json(rows)
   })
 

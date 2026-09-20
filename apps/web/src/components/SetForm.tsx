@@ -1,0 +1,125 @@
+import { useForm } from '@tanstack/react-form'
+import { setFormSchema } from 'api/schema/set'
+
+/**
+ * セット入力フォーム。
+ *
+ * 検証には apps/api の Zod スキーマをそのまま渡している（Standard Schema 対応）。
+ * サーバーと同じルールなので「クライアントは通るのにサーバーで 400」が起きない。
+ */
+export function SetForm({
+  onSubmit,
+  isPending,
+}: {
+  onSubmit: (input: { weightKg: number; reps: number }) => Promise<unknown>
+  isPending: boolean
+}) {
+  const form = useForm({
+    defaultValues: { weightKg: '', reps: '' },
+    validators: { onSubmit: setFormSchema },
+    onSubmit: async ({ value, formApi }) => {
+      const parsed = setFormSchema.parse(value)
+      await onSubmit(parsed)
+      // 連続して入力するので、重量は残して回数だけ消す
+      formApi.setFieldValue('reps', '')
+    },
+  })
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault()
+        form.handleSubmit()
+      }}
+      className="flex flex-wrap items-start gap-2"
+    >
+      <form.Field name="weightKg">
+        {(field) => (
+          <NumberField
+            label="重量 (kg)"
+            field={field}
+            inputMode="decimal"
+            placeholder="60"
+          />
+        )}
+      </form.Field>
+
+      <form.Field name="reps">
+        {(field) => (
+          <NumberField
+            label="回数"
+            field={field}
+            inputMode="numeric"
+            placeholder="10"
+          />
+        )}
+      </form.Field>
+
+      <form.Subscribe selector={(s) => s.isSubmitting}>
+        {(isSubmitting) => (
+          <button
+            type="submit"
+            disabled={isSubmitting || isPending}
+            className="mt-5 rounded-md bg-slate-900 px-4 py-2 font-medium text-sm text-white disabled:opacity-40 dark:bg-slate-100 dark:text-slate-900"
+          >
+            記録する
+          </button>
+        )}
+      </form.Subscribe>
+    </form>
+  )
+}
+
+/**
+ * TanStack Form の FieldApi は型引数が非常に多い。
+ * ここで必要なのは以下の形だけなので、構造的な型で受ける
+ * （メソッド記法にすることで実際の FieldApi が代入可能になる）。
+ */
+type FieldLike = {
+  name: string
+  state: { value: string; meta: { errors: unknown[] } }
+  handleBlur(): void
+  handleChange(value: string): void
+}
+
+function NumberField({
+  label,
+  field,
+  inputMode,
+  placeholder,
+}: {
+  label: string
+  field: FieldLike
+  inputMode: 'decimal' | 'numeric'
+  placeholder: string
+}) {
+  const errors: string[] = field.state.meta.errors
+    .map((e) =>
+      typeof e === 'string' ? e : ((e as { message?: string })?.message ?? ''),
+    )
+    .filter(Boolean)
+
+  return (
+    <div className="flex flex-col">
+      <label htmlFor={field.name} className="mb-1 text-slate-500 text-xs">
+        {label}
+      </label>
+      <input
+        id={field.name}
+        name={field.name}
+        inputMode={inputMode}
+        placeholder={placeholder}
+        value={field.state.value}
+        onBlur={field.handleBlur}
+        onChange={(e) => field.handleChange(e.target.value)}
+        aria-invalid={errors.length > 0}
+        className="w-24 rounded-md border border-slate-300 px-2 py-2 text-base tabular-nums dark:border-slate-700 dark:bg-slate-900"
+      />
+      {errors.length > 0 && (
+        <p role="alert" className="mt-1 max-w-24 text-red-600 text-xs">
+          {errors[0]}
+        </p>
+      )}
+    </div>
+  )
+}

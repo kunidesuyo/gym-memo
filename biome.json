@@ -5,7 +5,8 @@
       "**",
       "!**/dist",
       "!**/.wrangler",
-      "!**/worker-configuration.d.ts"
+      "!**/worker-configuration.d.ts",
+      "!**/routeTree.gen.ts"
     ]
   },
   "formatter": {
