@@ -1,0 +1,17 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "gym-memo",
+  "main": "apps/api/src/index.ts",
+  // vitest-pool-workers が同梱する workerd は wrangler 同梱版より古いことがある。
+  // 両方が受け付ける日付に合わせる（テスト側の上限が 2026-08-22 だった）。
+  "compatibility_date": "2026-08-22",
+
+  // 静的アセット = Vite がビルドした SPA。
+  // /api/* だけを Worker に回し、それ以外はアセット配信 + SPA フォールバック。
+  "assets": {
+    "directory": "./apps/web/dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  }
+}
