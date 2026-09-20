@@ -114,6 +114,24 @@ export function useWorkout(id: string) {
   })
 }
 
+export type ExerciseHistory = InferResponseType<
+  (typeof client.api.exercises)[':id']['history']['$get'],
+  200
+>
+
+export function useExerciseHistory(exerciseId: string) {
+  return useQuery({
+    queryKey: keys.exerciseHistory(exerciseId),
+    queryFn: async () => {
+      const res = await client.api.exercises[':id'].history.$get({
+        param: { id: exerciseId },
+      })
+      if (!res.ok) throw await errorFrom(res, '記録の取得に失敗しました')
+      return res.json()
+    },
+  })
+}
+
 export function useLastSets(exerciseId: string, excludeWorkoutId: string) {
   return useQuery({
     queryKey: keys.lastSets(exerciseId, excludeWorkoutId),

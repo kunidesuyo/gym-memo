@@ -1,4 +1,4 @@
-import { and, count, desc, eq, ne, sql } from 'drizzle-orm'
+import { and, count, desc, eq, inArray, ne, sql } from 'drizzle-orm'
 import type { NewExercise } from '../schema/exercise'
 import type { Db } from './index'
 import { exercises, sets, workouts } from './schema'
@@ -229,4 +229,55 @@ export async function deleteSet(db: Db, id: string) {
 
 export async function deleteWorkout(db: Db, id: string) {
   await db.delete(workouts).where(eq(workouts.id, id))
+}
+
+/**
+ * 種目ごとの記録。セッション単位にまとめて新しい順に返す。
+ *
+ * 「どのセッションか」を先に絞ってから、そのセットを取る2段構え。
+ * 1クエリで取って JS で切ると件数制限がかけられないため。
+ */
+export async function getExerciseHistory(
+  db: Db,
+  exerciseId: string,
+  limit = 30,
+) {
+  const sessions = await db
+    .select({ workoutId: workouts.id, performedOn: workouts.performedOn })
+    .from(sets)
+    .innerJoin(workouts, eq(sets.workoutId, workouts.id))
+    .where(eq(sets.exerciseId, exerciseId))
+    .groupBy(workouts.id)
+    .orderBy(desc(workouts.performedOn), desc(workouts.id))
+    .limit(limit)
+
+  if (sessions.length === 0) return []
+
+  const rows = await db
+    .select({
+      id: sets.id,
+      workoutId: sets.workoutId,
+      setOrder: sets.setOrder,
+      weightKg: sets.weightKg,
+      reps: sets.reps,
+      note: sets.note,
+    })
+    .from(sets)
+    .where(
+      and(
+        eq(sets.exerciseId, exerciseId),
+        inArray(
+          sets.workoutId,
+          sessions.map((s) => s.workoutId),
+        ),
+      ),
+    )
+    .orderBy(sets.setOrder, sets.id)
+
+  return sessions.map((s) => ({
+    ...s,
+    sets: rows
+      .filter((r) => r.workoutId === s.workoutId)
+      .map(({ workoutId: _, ...rest }) => rest),
+  }))
 }

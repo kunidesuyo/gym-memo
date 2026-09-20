@@ -10,6 +10,8 @@ export const keys = {
   exercises: (category?: string) => ['exercises', { category }] as const,
   workouts: () => ['workouts'] as const,
   workout: (id: string) => ['workouts', id] as const,
+  exerciseHistory: (exerciseId: string) =>
+    ['exercises', exerciseId, 'history'] as const,
   lastSets: (exerciseId: string, excludeWorkoutId?: string) =>
     ['exercises', exerciseId, 'last-sets', { excludeWorkoutId }] as const,
 }

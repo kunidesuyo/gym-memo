@@ -1,6 +1,7 @@
 import { delay, HttpResponse, http } from 'msw'
 import type {
   Exercise,
+  ExerciseHistory,
   LastSetsResult,
   Workout,
   WorkoutSummary,
@@ -62,6 +63,31 @@ export const workoutWithSetsFixture: Workout = {
       weightKg: 65,
       reps: 8,
       note: null,
+    },
+  ],
+}
+
+export const historyFixture: ExerciseHistory = {
+  exercise: {
+    id: BENCH_ID,
+    name: 'ベンチプレス',
+    category: 'push',
+    muscleGroup: 'chest',
+    createdAt: '2026-09-01',
+  },
+  sessions: [
+    {
+      workoutId: WORKOUT_ID,
+      performedOn: '2026-09-20',
+      sets: [{ id: 'h1', setOrder: 1, weightKg: 70, reps: 6, note: null }],
+    },
+    {
+      workoutId: '01a0bf19-0000-7000-8000-000000000009',
+      performedOn: '2026-09-13',
+      sets: [
+        { id: 'h2', setOrder: 1, weightKg: 60, reps: 10, note: 'シート3段目' },
+        { id: 'h3', setOrder: 2, weightKg: 65, reps: 8, note: null },
+      ],
     },
   ],
 }
@@ -132,6 +158,10 @@ export const handlers = [
   }),
 
   http.get('/api/workouts/:id', () => HttpResponse.json(workoutFixture)),
+
+  http.get('/api/exercises/:id/history', () =>
+    HttpResponse.json(historyFixture),
+  ),
 
   http.get('/api/exercises/:id/last-sets', () =>
     HttpResponse.json(lastSetsFixture),

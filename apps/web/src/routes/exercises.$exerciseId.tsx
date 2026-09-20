@@ -1,7 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { ExerciseHistory } from '../components/ExerciseHistory'
 
 export const Route = createFileRoute('/exercises/$exerciseId')({
-  component: () => (
-    <p className="text-slate-400">種目ごとの記録（1-f で実装）</p>
-  ),
+  component: RouteComponent,
 })
+
+function RouteComponent() {
+  const { exerciseId } = Route.useParams()
+  return <ExerciseHistory exerciseId={exerciseId} />
+}

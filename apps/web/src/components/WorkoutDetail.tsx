@@ -1,4 +1,4 @@
-import { useNavigate } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import {
   useAddSet,
@@ -156,7 +156,15 @@ export function WorkoutDetail({ workoutId }: { workoutId: string }) {
           <div className="flex flex-col gap-3">
             {groups.map((g) => (
               <div key={g.exerciseId}>
-                <h3 className="font-medium text-sm">{g.exerciseName}</h3>
+                <h3 className="font-medium text-sm">
+                  <Link
+                    to="/exercises/$exerciseId"
+                    params={{ exerciseId: g.exerciseId }}
+                    className="underline-offset-2 hover:underline"
+                  >
+                    {g.exerciseName}
+                  </Link>
+                </h3>
                 <ul>
                   {g.sets.map((s) => (
                     <SetRow

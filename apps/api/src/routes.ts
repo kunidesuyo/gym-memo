@@ -10,6 +10,7 @@ import {
   deleteSet,
   deleteWorkout,
   getExercise,
+  getExerciseHistory,
   getLastSets,
   getWorkout,
   listExercises,
@@ -183,6 +184,21 @@ export const routes = new Hono<{ Bindings: Env }>()
     if (!removed) return c.json({ error: 'set not found' }, 404)
     return c.body(null, 204)
   })
+
+  .get(
+    '/api/exercises/:id/history',
+    zValidator('param', idParamSchema),
+    async (c) => {
+      const { id } = c.req.valid('param')
+      const db = createDb(c.env.DB)
+
+      const exercise = await getExercise(db, id)
+      if (!exercise) return c.json({ error: 'exercise not found' }, 404)
+
+      const sessions = await getExerciseHistory(db, id)
+      return c.json({ exercise, sessions }, 200)
+    },
+  )
 
   .get(
     '/api/exercises/:id/last-sets',
