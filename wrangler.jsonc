@@ -13,5 +13,17 @@
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/api/*"]
-  }
+  },
+
+  // database_id はローカル開発では実在しなくてよい。
+  // Cloudflare アカウント作成後（フェーズ2）に本物の ID へ差し替える。
+  // migrations_dir を省くと wrangler はリポジトリ直下の ./migrations を探して失敗する。
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "gym-memo",
+      "database_id": "local-placeholder",
+      "migrations_dir": "apps/api/migrations"
+    }
+  ]
 }

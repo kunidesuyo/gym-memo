@@ -1,5 +1,12 @@
-import { cloudflareTest } from '@cloudflare/vitest-pool-workers'
+import {
+  cloudflareTest,
+  readD1Migrations,
+} from '@cloudflare/vitest-pool-workers'
 import { defineConfig } from 'vitest/config'
+
+// マイグレーションは Node 側（ここ）で読み、バインディング経由でテストに渡す。
+// workerd の中では fs が使えないため。
+const migrations = await readD1Migrations('./migrations')
 
 /**
  * テストは Node ではなく workerd（本番と同じランタイム）の中で走る。
@@ -13,6 +20,8 @@ export default defineConfig({
   plugins: [
     cloudflareTest({
       wrangler: { configPath: '../../wrangler.jsonc' },
+      miniflare: { bindings: { TEST_MIGRATIONS: migrations } },
     }),
   ],
+  test: { setupFiles: ['./test/setup.ts'] },
 })
