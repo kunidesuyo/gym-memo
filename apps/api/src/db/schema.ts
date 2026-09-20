@@ -7,10 +7,17 @@ import {
   text,
 } from 'drizzle-orm/sqlite-core'
 
-/** 種目マスタ。フェーズ1では固定シードのみで、CRUD は作らない。 */
+/**
+ * 種目マスタ。ユーザーが自分で追加・編集・削除する。
+ * 削除は物理削除で、セットから参照されている場合は API 側で拒否する（409）。
+ *
+ * category(PPL) と muscleGroup(細かい部位) は独立したカラム。
+ * 矛盾は DB 制約ではなく画面側の既定値で防ぐ（schema/exercise.ts の defaultCategoryFor）。
+ */
 export const exercises = sqliteTable('exercises', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   name: text('name').notNull().unique(),
+  category: text('category').notNull().$type<'push' | 'pull' | 'legs'>(),
   muscleGroup: text('muscle_group').notNull(),
   createdAt: text('created_at').notNull().default(sql`(current_timestamp)`),
 })
@@ -40,6 +47,7 @@ export const sets = sqliteTable(
     setOrder: integer('set_order').notNull(),
     weightKg: real('weight_kg').notNull(),
     reps: integer('reps').notNull(),
+    note: text('note'),
     createdAt: text('created_at').notNull().default(sql`(current_timestamp)`),
   },
   (t) => [

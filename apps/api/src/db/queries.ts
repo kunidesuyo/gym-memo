@@ -1,9 +1,47 @@
-import { and, desc, eq, ne, sql } from 'drizzle-orm'
+import { and, count, desc, eq, ne, sql } from 'drizzle-orm'
+import type { NewExercise } from '../schema/exercise'
 import type { Db } from './index'
 import { exercises, sets, workouts } from './schema'
 
-export function listExercises(db: Db) {
-  return db.select().from(exercises).orderBy(exercises.id)
+export function listExercises(db: Db, category?: 'push' | 'pull' | 'legs') {
+  return db
+    .select()
+    .from(exercises)
+    .where(category ? eq(exercises.category, category) : undefined)
+    .orderBy(exercises.category, exercises.muscleGroup, exercises.name)
+}
+
+export async function getExercise(db: Db, id: number) {
+  const [row] = await db.select().from(exercises).where(eq(exercises.id, id))
+  return row ?? null
+}
+
+export async function createExercise(db: Db, input: NewExercise) {
+  const [row] = await db.insert(exercises).values(input).returning()
+  if (!row) throw new Error('種目の作成に失敗しました')
+  return row
+}
+
+export async function updateExercise(db: Db, id: number, input: NewExercise) {
+  const [row] = await db
+    .update(exercises)
+    .set(input)
+    .where(eq(exercises.id, id))
+    .returning()
+  return row ?? null
+}
+
+/** この種目を参照しているセットの件数。削除可否の判定に使う。 */
+export async function countSetsForExercise(db: Db, exerciseId: number) {
+  const [row] = await db
+    .select({ n: count() })
+    .from(sets)
+    .where(eq(sets.exerciseId, exerciseId))
+  return row?.n ?? 0
+}
+
+export async function deleteExercise(db: Db, id: number) {
+  await db.delete(exercises).where(eq(exercises.id, id))
 }
 
 /** セッション一覧（新しい順）。セット数を添えて一覧表示に使う。 */
@@ -41,6 +79,7 @@ export async function getWorkout(db: Db, id: number) {
       setOrder: sets.setOrder,
       weightKg: sets.weightKg,
       reps: sets.reps,
+      note: sets.note,
     })
     .from(sets)
     .innerJoin(exercises, eq(sets.exerciseId, exercises.id))
@@ -57,7 +96,12 @@ export async function getWorkout(db: Db, id: number) {
 export async function addSet(
   db: Db,
   workoutId: number,
-  input: { exerciseId: number; weightKg: number; reps: number },
+  input: {
+    exerciseId: number
+    weightKg: number
+    reps: number
+    note?: string | null
+  },
 ) {
   const [agg] = await db
     .select({ maxOrder: sql<number | null>`max(${sets.setOrder})` })
@@ -74,6 +118,7 @@ export async function addSet(
       setOrder: (agg?.maxOrder ?? 0) + 1,
       weightKg: input.weightKg,
       reps: input.reps,
+      note: input.note ?? null,
     })
     .returning()
 
@@ -116,6 +161,7 @@ export async function getLastSets(
       setOrder: sets.setOrder,
       weightKg: sets.weightKg,
       reps: sets.reps,
+      note: sets.note,
     })
     .from(sets)
     .where(

@@ -23,8 +23,8 @@ export async function seedExercises() {
   const [bench, squat] = await testDb()
     .insert(exercises)
     .values([
-      { name: 'ベンチプレス', muscleGroup: 'chest' },
-      { name: 'スクワット', muscleGroup: 'legs' },
+      { name: 'ベンチプレス', category: 'push', muscleGroup: 'chest' },
+      { name: 'スクワット', category: 'legs', muscleGroup: 'quads' },
     ])
     .returning()
 

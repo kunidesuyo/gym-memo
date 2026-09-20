@@ -7,7 +7,7 @@
  *   ['workouts', id]    → 個別。['workouts'] を invalidate すると両方が対象になる
  */
 export const keys = {
-  exercises: () => ['exercises'] as const,
+  exercises: (category?: string) => ['exercises', { category }] as const,
   workouts: () => ['workouts'] as const,
   workout: (id: number) => ['workouts', id] as const,
   lastSets: (exerciseId: number, excludeWorkoutId?: number) =>

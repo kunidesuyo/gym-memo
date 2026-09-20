@@ -9,6 +9,7 @@ export const newSetSchema = z.object({
   exerciseId: z.number().int().positive(),
   weightKg: z.number().nonnegative().max(1000, '重量が大きすぎます'),
   reps: z.number().int().positive().max(1000, '回数が大きすぎます'),
+  note: z.string().trim().max(200, 'メモが長すぎます').nullish(),
 })
 
 export type NewSet = z.infer<typeof newSetSchema>
@@ -24,6 +25,7 @@ export type SetInput = z.infer<typeof setInputSchema>
  * TanStack Form の検証にそのまま渡せる（Standard Schema 対応）。
  */
 export const setFormSchema = z.object({
+  note: z.string().trim().max(200, 'メモが長すぎます'),
   weightKg: z
     .string()
     .min(1, '重量を入力してください')

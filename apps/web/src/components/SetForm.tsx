@@ -11,17 +11,22 @@ export function SetForm({
   onSubmit,
   isPending,
 }: {
-  onSubmit: (input: { weightKg: number; reps: number }) => Promise<unknown>
+  onSubmit: (input: {
+    weightKg: number
+    reps: number
+    note: string
+  }) => Promise<unknown>
   isPending: boolean
 }) {
   const form = useForm({
-    defaultValues: { weightKg: '', reps: '' },
+    defaultValues: { weightKg: '', reps: '', note: '' },
     validators: { onSubmit: setFormSchema },
     onSubmit: async ({ value, formApi }) => {
       const parsed = setFormSchema.parse(value)
       await onSubmit(parsed)
-      // 連続して入力するので、重量は残して回数だけ消す
+      // 連続して入力するので、重量は残して回数とメモだけ消す
       formApi.setFieldValue('reps', '')
+      formApi.setFieldValue('note', '')
     },
   })
 
@@ -52,6 +57,25 @@ export function SetForm({
             inputMode="numeric"
             placeholder="10"
           />
+        )}
+      </form.Field>
+
+      <form.Field name="note">
+        {(field) => (
+          <div className="flex min-w-40 flex-1 flex-col">
+            <label htmlFor={field.name} className="mb-1 text-slate-500 text-xs">
+              メモ（任意）
+            </label>
+            <input
+              id={field.name}
+              name={field.name}
+              placeholder="シート3段目 / 最後きつい"
+              value={field.state.value}
+              onBlur={field.handleBlur}
+              onChange={(e) => field.handleChange(e.target.value)}
+              className="rounded-md border border-slate-300 px-2 py-2 text-base dark:border-slate-700 dark:bg-slate-900"
+            />
+          </div>
         )}
       </form.Field>
 

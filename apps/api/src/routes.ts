@@ -3,13 +3,19 @@ import { Hono } from 'hono'
 import { createDb } from './db'
 import {
   addSet,
+  countSetsForExercise,
+  createExercise,
   createWorkout,
+  deleteExercise,
+  getExercise,
   getLastSets,
   getWorkout,
   listExercises,
   listWorkouts,
+  updateExercise,
 } from './db/queries'
 import { idParamSchema } from './schema/common'
+import { exerciseQuerySchema, newExerciseSchema } from './schema/exercise'
 import { lastSetsQuerySchema, newSetSchema } from './schema/set'
 import { newWorkoutSchema } from './schema/workout'
 
@@ -29,10 +35,75 @@ export const routes = new Hono<{ Bindings: Env }>()
     }),
   )
 
-  .get('/api/exercises', async (c) => {
-    const rows = await listExercises(createDb(c.env.DB))
-    return c.json(rows)
+  .get(
+    '/api/exercises',
+    zValidator('query', exerciseQuerySchema),
+    async (c) => {
+      const { category } = c.req.valid('query')
+      const rows = await listExercises(createDb(c.env.DB), category)
+      // 明示的に 200 を付ける。付けないと型が ContentfulStatusCode になり、
+      // web 側で InferResponseType<..., 200> による絞り込みが効かない。
+      return c.json(rows, 200)
+    },
+  )
+
+  .post('/api/exercises', zValidator('json', newExerciseSchema), async (c) => {
+    const db = createDb(c.env.DB)
+    const input = c.req.valid('json')
+
+    // name は UNIQUE。DB 例外を 500 で返さず、意味のある 409 にする。
+    const rows = await listExercises(db)
+    if (rows.some((r) => r.name === input.name)) {
+      return c.json({ error: '同じ名前の種目があります' }, 409)
+    }
+
+    const row = await createExercise(db, input)
+    return c.json(row, 201)
   })
+
+  .patch(
+    '/api/exercises/:id',
+    zValidator('param', idParamSchema),
+    zValidator('json', newExerciseSchema),
+    async (c) => {
+      const { id } = c.req.valid('param')
+      const input = c.req.valid('json')
+      const db = createDb(c.env.DB)
+
+      const rows = await listExercises(db)
+      if (rows.some((r) => r.name === input.name && r.id !== id)) {
+        return c.json({ error: '同じ名前の種目があります' }, 409)
+      }
+
+      const row = await updateExercise(db, id, input)
+      if (!row) return c.json({ error: 'exercise not found' }, 404)
+      return c.json(row)
+    },
+  )
+
+  .delete(
+    '/api/exercises/:id',
+    zValidator('param', idParamSchema),
+    async (c) => {
+      const { id } = c.req.valid('param')
+      const db = createDb(c.env.DB)
+
+      const exercise = await getExercise(db, id)
+      if (!exercise) return c.json({ error: 'exercise not found' }, 404)
+
+      // 物理削除の方針なので、履歴が壊れる参照があれば拒否する
+      const used = await countSetsForExercise(db, id)
+      if (used > 0) {
+        return c.json(
+          { error: `この種目は${used}件の記録で使われています`, usedBy: used },
+          409,
+        )
+      }
+
+      await deleteExercise(db, id)
+      return c.body(null, 204)
+    },
+  )
 
   .get('/api/workouts', async (c) => {
     const rows = await listWorkouts(createDb(c.env.DB))

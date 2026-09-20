@@ -1,11 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import type { Category, NewExercise } from 'api/schema/exercise'
 import type { SetInput } from 'api/schema/set'
 import type { InferResponseType } from 'hono/client'
 import { client } from './client'
 import { keys } from './keys'
 
+// zValidator を付けたルートは 400 も返すため、200 に絞らないとユニオンになる
 export type Exercise = InferResponseType<
-  typeof client.api.exercises.$get
+  typeof client.api.exercises.$get,
+  200
 >[number]
 export type Workout = InferResponseType<
   (typeof client.api.workouts)[':id']['$get'],
@@ -21,16 +24,73 @@ export type LastSetsResult = InferResponseType<
   200
 >
 
-export function useExercises() {
+/**
+ * サーバーが返すエラーメッセージを拾う。落ちたら既定文言にフォールバックする。
+ *
+ * 引数を `Response` にしないのは、web の tsconfig が worker-configuration.d.ts を
+ * 読んでいるため `Response` が Worker 版（webSocket / cf を持つ）になり、
+ * Hono の ClientResponse を受け取れないから。必要な形だけを構造的に受ける。
+ */
+async function errorFrom(res: { json(): Promise<unknown> }, fallback: string) {
+  try {
+    const body = (await res.json()) as { error?: string }
+    return new Error(body.error ?? fallback)
+  } catch {
+    return new Error(fallback)
+  }
+}
+
+export function useExercises(category?: Category) {
   return useQuery({
-    queryKey: keys.exercises(),
+    queryKey: keys.exercises(category),
     queryFn: async () => {
-      const res = await client.api.exercises.$get()
+      const res = await client.api.exercises.$get({
+        query: category ? { category } : {},
+      })
       if (!res.ok) throw new Error('種目の取得に失敗しました')
       return res.json()
     },
-    // 種目マスタはフェーズ1では固定シード。取り直す理由がないので古くならない扱いにする。
-    staleTime: Number.POSITIVE_INFINITY,
+  })
+}
+
+export function useCreateExercise() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: NewExercise) => {
+      const res = await client.api.exercises.$post({ json: input })
+      if (!res.ok) throw await errorFrom(res, '種目の追加に失敗しました')
+      return res.json()
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['exercises'] }),
+  })
+}
+
+export function useUpdateExercise() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, ...input }: NewExercise & { id: number }) => {
+      const res = await client.api.exercises[':id'].$patch({
+        param: { id: String(id) },
+        json: input,
+      })
+      if (!res.ok) throw await errorFrom(res, '種目の更新に失敗しました')
+      return res.json()
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['exercises'] }),
+  })
+}
+
+export function useDeleteExercise() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const res = await client.api.exercises[':id'].$delete({
+        param: { id: String(id) },
+      })
+      // 使用中の種目は 409。サーバーの文言をそのまま見せる
+      if (!res.ok) throw await errorFrom(res, '種目の削除に失敗しました')
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['exercises'] }),
   })
 }
 
@@ -111,7 +171,7 @@ export function useAddSet(workoutId: number) {
       const previous = qc.getQueryData<Workout>(keys.workout(workoutId))
 
       // 種目名は取得済みの種目一覧キャッシュから借りる（再取得しない）
-      const exercises = qc.getQueryData<Exercise[]>(keys.exercises())
+      const exercises = qc.getQueryData<Exercise[]>(keys.exercises(undefined))
       const exerciseName =
         exercises?.find((e) => e.id === input.exerciseId)?.name ?? ''
 
@@ -127,6 +187,7 @@ export function useAddSet(workoutId: number) {
           setOrder: sameExercise.length + 1,
           weightKg: input.weightKg,
           reps: input.reps,
+          note: input.note ?? null,
         }
         return { ...old, sets: [...old.sets, optimistic] }
       })

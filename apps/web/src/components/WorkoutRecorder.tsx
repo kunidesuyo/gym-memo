@@ -56,10 +56,16 @@ export function WorkoutRecorder({ workoutId }: { workoutId: number }) {
 
           <SetForm
             onSubmit={(input) =>
-              addSet.mutateAsync({ ...input, exerciseId }).catch(() => {
-                // 失敗は addSet.error として下に表示する。
-                // ここで握らないと未処理の Promise 拒否になる。
-              })
+              addSet
+                .mutateAsync({
+                  ...input,
+                  exerciseId,
+                  note: input.note === '' ? null : input.note,
+                })
+                .catch(() => {
+                  // 失敗は addSet.error として下に表示する。
+                  // ここで握らないと未処理の Promise 拒否になる。
+                })
             }
             isPending={addSet.isPending}
           />
