@@ -1,6 +1,12 @@
 import { z } from 'zod'
 
-/** URL パラメータの :id。文字列で届くので数値に変換する。 */
+/**
+ * URL パラメータの :id。
+ *
+ * 生成しているのは UUIDv7 のみだが、検索キーとしての検証はバージョンを問わない
+ * `z.uuid()` にしてある。将来クライアント発行に変えたときに版を縛って困らないため。
+ * 存在しない ID は 404 で返せばよい。
+ */
 export const idParamSchema = z.object({
-  id: z.coerce.number().int().positive(),
+  id: z.uuid(),
 })

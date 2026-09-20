@@ -7,8 +7,11 @@ import {
 } from '../src/db/queries'
 import { resetDb, seedExercises, testDb } from './helpers'
 
-let benchId: number
-let squatId: number
+/** 形式は正しいが存在しない UUID。404 の確認に使う。 */
+const MISSING_ID = '01a0bf17-0000-7000-8000-000000000000'
+
+let benchId: string
+let squatId: string
 
 beforeEach(async () => {
   await resetDb()
@@ -63,7 +66,7 @@ describe('getWorkout', () => {
   })
 
   it('存在しない ID には null', async () => {
-    expect(await getWorkout(testDb(), 9999)).toBeNull()
+    expect(await getWorkout(testDb(), MISSING_ID)).toBeNull()
   })
 })
 

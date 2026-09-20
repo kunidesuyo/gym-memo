@@ -7,5 +7,5 @@ export const Route = createFileRoute('/workouts/$workoutId')({
 
 function RouteComponent() {
   const { workoutId } = Route.useParams()
-  return <WorkoutRecorder workoutId={Number(workoutId)} />
+  return <WorkoutRecorder workoutId={workoutId} />
 }

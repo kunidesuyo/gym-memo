@@ -11,7 +11,7 @@ export function listExercises(db: Db, category?: 'push' | 'pull' | 'legs') {
     .orderBy(exercises.category, exercises.muscleGroup, exercises.name)
 }
 
-export async function getExercise(db: Db, id: number) {
+export async function getExercise(db: Db, id: string) {
   const [row] = await db.select().from(exercises).where(eq(exercises.id, id))
   return row ?? null
 }
@@ -22,7 +22,7 @@ export async function createExercise(db: Db, input: NewExercise) {
   return row
 }
 
-export async function updateExercise(db: Db, id: number, input: NewExercise) {
+export async function updateExercise(db: Db, id: string, input: NewExercise) {
   const [row] = await db
     .update(exercises)
     .set(input)
@@ -32,7 +32,7 @@ export async function updateExercise(db: Db, id: number, input: NewExercise) {
 }
 
 /** この種目を参照しているセットの件数。削除可否の判定に使う。 */
-export async function countSetsForExercise(db: Db, exerciseId: number) {
+export async function countSetsForExercise(db: Db, exerciseId: string) {
   const [row] = await db
     .select({ n: count() })
     .from(sets)
@@ -40,7 +40,7 @@ export async function countSetsForExercise(db: Db, exerciseId: number) {
   return row?.n ?? 0
 }
 
-export async function deleteExercise(db: Db, id: number) {
+export async function deleteExercise(db: Db, id: string) {
   await db.delete(exercises).where(eq(exercises.id, id))
 }
 
@@ -67,7 +67,7 @@ export async function createWorkout(db: Db, performedOn: string) {
 }
 
 /** セッション1件と、そのセット（種目名つき）。 */
-export async function getWorkout(db: Db, id: number) {
+export async function getWorkout(db: Db, id: string) {
   const [workout] = await db.select().from(workouts).where(eq(workouts.id, id))
   if (!workout) return null
 
@@ -95,9 +95,9 @@ export async function getWorkout(db: Db, id: number) {
  */
 export async function addSet(
   db: Db,
-  workoutId: number,
+  workoutId: string,
   input: {
-    exerciseId: number
+    exerciseId: string
     weightKg: number
     reps: number
     note?: string | null
@@ -134,8 +134,8 @@ export async function addSet(
  */
 export async function getLastSets(
   db: Db,
-  exerciseId: number,
-  excludeWorkoutId?: number,
+  exerciseId: string,
+  excludeWorkoutId?: string,
 ) {
   const [last] = await db
     .select({ workoutId: workouts.id, performedOn: workouts.performedOn })

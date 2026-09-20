@@ -3,8 +3,8 @@ import { useAddSet, useExercises, useLastSets, useWorkout } from '../api/hooks'
 import { LastSets } from './LastSets'
 import { SetForm } from './SetForm'
 
-export function WorkoutRecorder({ workoutId }: { workoutId: number }) {
-  const [exerciseId, setExerciseId] = useState(0)
+export function WorkoutRecorder({ workoutId }: { workoutId: string }) {
+  const [exerciseId, setExerciseId] = useState('')
 
   const exercises = useExercises()
   const workout = useWorkout(workoutId)
@@ -38,10 +38,10 @@ export function WorkoutRecorder({ workoutId }: { workoutId: number }) {
         <select
           id="exercise"
           value={exerciseId}
-          onChange={(e) => setExerciseId(Number(e.target.value))}
+          onChange={(e) => setExerciseId(e.target.value)}
           className="rounded-md border border-slate-300 px-2 py-2 text-base dark:border-slate-700 dark:bg-slate-900"
         >
-          <option value={0}>選択してください</option>
+          <option value="">選択してください</option>
           {exercises.data?.map((e) => (
             <option key={e.id} value={e.id}>
               {e.name}
@@ -50,7 +50,7 @@ export function WorkoutRecorder({ workoutId }: { workoutId: number }) {
         </select>
       </div>
 
-      {exerciseId > 0 && (
+      {exerciseId !== '' && (
         <>
           <LastSets data={lastSets.data} isPending={lastSets.isPending} />
 

@@ -2,6 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { delay, HttpResponse, http } from 'msw'
 import { describe, expect, it } from 'vitest'
+import { BENCH_ID, WORKOUT_ID } from '../../test/msw/handlers'
 import { server } from '../../test/msw/server'
 import { renderWithQuery } from '../../test/utils'
 import { WorkoutRecorder } from './WorkoutRecorder'
@@ -20,20 +21,23 @@ async function selectBenchPress() {
     expect(screen.getByRole('combobox', { name: '種目' })).toBeEnabled(),
   )
   await screen.findByRole('option', { name: 'ベンチプレス' })
-  await user.selectOptions(screen.getByRole('combobox', { name: '種目' }), '1')
+  await user.selectOptions(
+    screen.getByRole('combobox', { name: '種目' }),
+    BENCH_ID,
+  )
   return user
 }
 
 describe('WorkoutRecorder', () => {
   it('種目を選ぶまでフォームを出さない', async () => {
-    renderWithQuery(<WorkoutRecorder workoutId={10} />)
+    renderWithQuery(<WorkoutRecorder workoutId={WORKOUT_ID} />)
 
     expect(await screen.findByText('2026-09-20')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '記録する' })).toBeNull()
   })
 
   it('種目を選ぶと前回の記録を表示する', async () => {
-    renderWithQuery(<WorkoutRecorder workoutId={10} />)
+    renderWithQuery(<WorkoutRecorder workoutId={WORKOUT_ID} />)
     await selectBenchPress()
 
     expect(await screen.findByText('2026-09-13')).toBeInTheDocument()
@@ -42,7 +46,7 @@ describe('WorkoutRecorder', () => {
   })
 
   it('記録したセットが「今日」に出る', async () => {
-    renderWithQuery(<WorkoutRecorder workoutId={10} />)
+    renderWithQuery(<WorkoutRecorder workoutId={WORKOUT_ID} />)
     const user = await selectBenchPress()
 
     expect(todaySection().getByText('まだ記録がありません')).toBeInTheDocument()
@@ -55,7 +59,7 @@ describe('WorkoutRecorder', () => {
   })
 
   it('サーバーの応答を待たずに画面へ反映する（楽観的更新）', async () => {
-    renderWithQuery(<WorkoutRecorder workoutId={10} />)
+    renderWithQuery(<WorkoutRecorder workoutId={WORKOUT_ID} />)
     const user = await selectBenchPress()
 
     await user.type(screen.getByLabelText('重量 (kg)'), '70')
@@ -78,7 +82,7 @@ describe('WorkoutRecorder', () => {
       }),
     )
 
-    renderWithQuery(<WorkoutRecorder workoutId={10} />)
+    renderWithQuery(<WorkoutRecorder workoutId={WORKOUT_ID} />)
     const user = await selectBenchPress()
 
     await user.type(screen.getByLabelText('重量 (kg)'), '70')

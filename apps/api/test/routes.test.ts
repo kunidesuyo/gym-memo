@@ -2,9 +2,12 @@ import { exports } from 'cloudflare:workers'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { resetDb, seedExercises } from './helpers'
 
+/** 形式は正しいが存在しない UUID。404 の確認に使う。 */
+const MISSING_ID = '01a0bf17-0000-7000-8000-000000000000'
+
 const BASE = 'https://example.com'
 
-let benchId: number
+let benchId: string
 
 beforeEach(async () => {
   await resetDb()
@@ -47,7 +50,7 @@ describe('POST /api/workouts', () => {
 describe('POST /api/workouts/:id/sets', () => {
   it('セットを記録して 201 を返す', async () => {
     const created = await post('/api/workouts', { performedOn: '2026-09-20' })
-    const { id } = (await created.json()) as { id: number }
+    const { id } = (await created.json()) as { id: string }
 
     const res = await post(`/api/workouts/${id}/sets`, {
       exerciseId: benchId,
@@ -63,7 +66,7 @@ describe('POST /api/workouts/:id/sets', () => {
   })
 
   it('存在しないセッションには 404（FK 違反の 500 にしない）', async () => {
-    const res = await post('/api/workouts/9999/sets', {
+    const res = await post(`/api/workouts/${MISSING_ID}/sets`, {
       exerciseId: benchId,
       weightKg: 60,
       reps: 10,
@@ -73,7 +76,7 @@ describe('POST /api/workouts/:id/sets', () => {
 
   it('負の重量は 400', async () => {
     const created = await post('/api/workouts', { performedOn: '2026-09-20' })
-    const { id } = (await created.json()) as { id: number }
+    const { id } = (await created.json()) as { id: string }
 
     const res = await post(`/api/workouts/${id}/sets`, {
       exerciseId: benchId,
@@ -95,7 +98,7 @@ describe('GET /api/exercises/:id/last-sets', () => {
 
   it('excludeWorkoutId で記録中のセッションを除外できる', async () => {
     const prev = await post('/api/workouts', { performedOn: '2026-09-10' })
-    const prevId = ((await prev.json()) as { id: number }).id
+    const prevId = ((await prev.json()) as { id: string }).id
     await post(`/api/workouts/${prevId}/sets`, {
       exerciseId: benchId,
       weightKg: 50,
@@ -103,7 +106,7 @@ describe('GET /api/exercises/:id/last-sets', () => {
     })
 
     const today = await post('/api/workouts', { performedOn: '2026-09-20' })
-    const todayId = ((await today.json()) as { id: number }).id
+    const todayId = ((await today.json()) as { id: string }).id
     await post(`/api/workouts/${todayId}/sets`, {
       exerciseId: benchId,
       weightKg: 60,

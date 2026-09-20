@@ -3,9 +3,12 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { addSet, createWorkout } from '../src/db/queries'
 import { resetDb, seedExercises, testDb } from './helpers'
 
+/** 形式は正しいが存在しない UUID。404 の確認に使う。 */
+const MISSING_ID = '01a0bf17-0000-7000-8000-000000000000'
+
 const BASE = 'https://example.com'
 
-let benchId: number
+let benchId: string
 
 beforeEach(async () => {
   await resetDb()
@@ -103,7 +106,7 @@ describe('PATCH /api/exercises/:id', () => {
   })
 
   it('存在しない ID は 404', async () => {
-    const res = await send('PATCH', '/api/exercises/9999', {
+    const res = await send('PATCH', `/api/exercises/${MISSING_ID}`, {
       name: '何か',
       category: 'push',
       muscleGroup: 'chest',
@@ -118,7 +121,7 @@ describe('DELETE /api/exercises/:id', () => {
     expect(res.status).toBe(204)
 
     const after = await exports.default.fetch(`${BASE}/api/exercises`)
-    const rows = (await after.json()) as { id: number }[]
+    const rows = (await after.json()) as { id: string }[]
     expect(rows.some((r) => r.id === benchId)).toBe(false)
   })
 
@@ -133,7 +136,7 @@ describe('DELETE /api/exercises/:id', () => {
   })
 
   it('存在しない ID は 404', async () => {
-    const res = await send('DELETE', '/api/exercises/9999')
+    const res = await send('DELETE', `/api/exercises/${MISSING_ID}`)
     expect(res.status).toBe(404)
   })
 })

@@ -68,9 +68,9 @@ export function useCreateExercise() {
 export function useUpdateExercise() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ id, ...input }: NewExercise & { id: number }) => {
+    mutationFn: async ({ id, ...input }: NewExercise & { id: string }) => {
       const res = await client.api.exercises[':id'].$patch({
-        param: { id: String(id) },
+        param: { id },
         json: input,
       })
       if (!res.ok) throw await errorFrom(res, '種目の更新に失敗しました')
@@ -83,10 +83,8 @@ export function useUpdateExercise() {
 export function useDeleteExercise() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (id: number) => {
-      const res = await client.api.exercises[':id'].$delete({
-        param: { id: String(id) },
-      })
+    mutationFn: async (id: string) => {
+      const res = await client.api.exercises[':id'].$delete({ param: { id } })
       // 使用中の種目は 409。サーバーの文言をそのまま見せる
       if (!res.ok) throw await errorFrom(res, '種目の削除に失敗しました')
     },
@@ -105,31 +103,29 @@ export function useWorkouts() {
   })
 }
 
-export function useWorkout(id: number) {
+export function useWorkout(id: string) {
   return useQuery({
     queryKey: keys.workout(id),
     queryFn: async () => {
-      const res = await client.api.workouts[':id'].$get({
-        param: { id: String(id) },
-      })
+      const res = await client.api.workouts[':id'].$get({ param: { id } })
       if (!res.ok) throw new Error('セッションの取得に失敗しました')
       return res.json()
     },
   })
 }
 
-export function useLastSets(exerciseId: number, excludeWorkoutId: number) {
+export function useLastSets(exerciseId: string, excludeWorkoutId: string) {
   return useQuery({
     queryKey: keys.lastSets(exerciseId, excludeWorkoutId),
     queryFn: async () => {
       const res = await client.api.exercises[':id']['last-sets'].$get({
-        param: { id: String(exerciseId) },
-        query: { excludeWorkoutId: String(excludeWorkoutId) },
+        param: { id: exerciseId },
+        query: { excludeWorkoutId },
       })
       if (!res.ok) throw new Error('前回の記録の取得に失敗しました')
       return res.json()
     },
-    enabled: exerciseId > 0,
+    enabled: exerciseId !== '',
   })
 }
 
@@ -153,13 +149,13 @@ export function useCreateWorkout() {
  * onMutate で先に画面を進め、失敗したら onError で巻き戻す。
  * onSettled でサーバーの真実に合わせ直す（採番された id と setOrder を取り込む）。
  */
-export function useAddSet(workoutId: number) {
+export function useAddSet(workoutId: string) {
   const qc = useQueryClient()
 
   return useMutation({
-    mutationFn: async (input: SetInput & { exerciseId: number }) => {
+    mutationFn: async (input: SetInput & { exerciseId: string }) => {
       const res = await client.api.workouts[':id'].sets.$post({
-        param: { id: String(workoutId) },
+        param: { id: workoutId },
         json: input,
       })
       if (!res.ok) throw new Error('セットの記録に失敗しました')
@@ -181,7 +177,9 @@ export function useAddSet(workoutId: number) {
           (s) => s.exerciseId === input.exerciseId,
         )
         const optimistic: WorkoutSet = {
-          id: -Date.now(), // サーバー採番前の仮 id（負数で本物と衝突させない）
+          // サーバー採番前の仮 id。UUID とは明らかに違う形にして本物と区別できるようにする。
+          // 発行をクライアント側に移せば、この仮 id 自体が不要になる。
+          id: `optimistic-${Date.now()}-${Math.random().toString(36).slice(2)}`,
           exerciseId: input.exerciseId,
           exerciseName,
           setOrder: sameExercise.length + 1,

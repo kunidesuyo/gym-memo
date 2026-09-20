@@ -1,6 +1,7 @@
 import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
+import { WORKOUT_ID } from '../../test/msw/handlers'
 import { renderWithRouter } from '../../test/utils'
 import { WorkoutList } from './WorkoutList'
 
@@ -17,7 +18,7 @@ describe('WorkoutList', () => {
     renderWithRouter(<WorkoutList />)
 
     const link = await screen.findByRole('link', { name: /2026-09-20/ })
-    expect(link).toHaveAttribute('href', '/workouts/10')
+    expect(link).toHaveAttribute('href', `/workouts/${WORKOUT_ID}`)
   })
 
   it('今日のセッションを作成できる', async () => {

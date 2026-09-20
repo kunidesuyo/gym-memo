@@ -42,7 +42,7 @@ export function WorkoutList() {
           <li key={w.id}>
             <Link
               to="/workouts/$workoutId"
-              params={{ workoutId: String(w.id) }}
+              params={{ workoutId: w.id }}
               className="flex items-center justify-between py-3"
             >
               <span className="tabular-nums">{w.performedOn}</span>

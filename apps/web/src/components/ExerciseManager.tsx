@@ -100,7 +100,7 @@ export function ExerciseManager() {
                   </span>
                   <Link
                     to="/exercises/$exerciseId"
-                    params={{ exerciseId: String(e.id) }}
+                    params={{ exerciseId: e.id }}
                     className="flex-1 underline-offset-2 hover:underline"
                   >
                     {e.name}

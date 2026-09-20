@@ -6,7 +6,7 @@ import { z } from 'zod'
  * サーバーとクライアントでルールがズレないようにするのが目的。
  */
 export const newSetSchema = z.object({
-  exerciseId: z.number().int().positive(),
+  exerciseId: z.uuid(),
   weightKg: z.number().nonnegative().max(1000, '重量が大きすぎます'),
   reps: z.number().int().positive().max(1000, '回数が大きすぎます'),
   note: z.string().trim().max(200, 'メモが長すぎます').nullish(),
@@ -51,5 +51,5 @@ export const setFormSchema = z.object({
 
 /** 「前回の記録」取得時、記録中のワークアウト自身を除外するためのクエリ。 */
 export const lastSetsQuerySchema = z.object({
-  excludeWorkoutId: z.coerce.number().int().positive().optional(),
+  excludeWorkoutId: z.uuid().optional(),
 })
