@@ -523,6 +523,8 @@ sets             1セットの記録（このアプリの主役テーブル）
 | 2026-09-20 | 技術スタック | 確定（4章）。ORM は Drizzle、Kysely は検討の上で却下 |
 | 2026-09-20 | テスト | 1-a から導入（11章）。「フェーズ1では入れない」を撤回 |
 | 2026-09-20 | 実装 | **1-a 完了**（12章）。疎通・型貫通・テスト基盤すべて実測で確認 |
+| 2026-09-20 | テスト | ストレージ分離は**テストファイル単位**と実測で判明（11章を訂正） |
+| 2026-09-20 | 環境 | Cloudflare アカウント無しでも 1-b は進行可能と実測で確認（12章） |
 
 ## 11. テスト戦略 —— 【決定 2026-09-20】
 
@@ -567,23 +569,38 @@ const res = await SELF.fetch('https://x/api/sets', { method: 'POST', body: ... }
 // → /api 振り分け → Hono → zValidator → Drizzle → D1 の全経路が実際に走る。モックゼロ
 ```
 
-**`isolatedStorage`**: 各テストの D1 書き込みがテスト終了時に自動ロールバックされる。
-`beforeEach` での後始末が不要。テストの順序依存も起きない。
+**ストレージの分離**（⚠️ 2026-09-20 実測で訂正）:
+当初「各テストの書き込みが終了時に自動ロールバックされる／`beforeEach` の後始末は不要」と
+書いていたが、**v0.22 では誤り**。`isolatedStorage` オプションは型定義から消えており、
+実測した分離の粒度は **テストファイル単位**だった。
 
-**D1 マイグレーションの適用**（1-b で追加）:
+```
+[A-1] count = 0   ファイル先頭             → まっさら
+[A-2] count = 1   同ファイル内の次のテスト  → A-1 の書き込みが残る
+[B-1] count = 0   別ファイル               → まっさら
+```
+
+→ **同一ファイル内のテストは状態を共有する。**
+   `beforeEach` での後始末、または「テストごとに一意なデータを使う」設計が必要。
+   ファイルをまたいだ汚染は起きないので、機能ごとにファイルを分けるのは有効。
+
+**D1 マイグレーションの適用**（1-b で追加。実測で動作確認済み）:
 
 ```ts
-// vitest.config.ts
-import { defineWorkersConfig, readD1Migrations } from '@cloudflare/vitest-pool-workers/config'
+// vitest.config.ts  ← v0.22 の新 API（cloudflareTest プラグイン方式）
+import { cloudflareTest, readD1Migrations } from '@cloudflare/vitest-pool-workers'
+import { defineConfig } from 'vitest/config'
+
 const migrations = await readD1Migrations('./migrations')
-export default defineWorkersConfig({
-  test: {
-    setupFiles: ['./test/setup.ts'],
-    poolOptions: { workers: {
+
+export default defineConfig({
+  plugins: [
+    cloudflareTest({
       wrangler: { configPath: '../../wrangler.jsonc' },   // 本番と同じ設定を読む
       miniflare: { bindings: { TEST_MIGRATIONS: migrations } },
-    }},
-  },
+    }),
+  ],
+  test: { setupFiles: ['./test/setup.ts'] },
 })
 
 // test/setup.ts
@@ -608,7 +625,7 @@ API を変えてモックを直し忘れると、テストは通るのに本番�
 今回は `apps/api` と `apps/web` が別パッケージなので、それぞれが自分の設定を持てば衝突しない。
 
 ```
-apps/api/vitest.config.ts   → defineWorkersConfig（workerd）
+apps/api/vitest.config.ts   → cloudflareTest プラグイン（workerd）
 apps/web/vitest.config.ts   → environment: 'jsdom'
 ```
 
@@ -743,6 +760,34 @@ proxy 先とのズレは原因が分かりにくいので、**専用ポート 51
 `/api/*` だけが Worker に回り、それ以外はアセット配信 + SPA フォールバック。
 ただし Worker 側にも `env.ASSETS.fetch()` のフォールバックを残し、
 **Worker 単体でも正しく振る舞えるように**してある。
+
+### Cloudflare アカウント無しで 1-b を進められるか（検証済み）
+
+**進められる。** 実測で確認した:
+
+- `database_id` は**ローカル開発では実在しなくてよい**。プレースホルダ文字列のまま
+  `wrangler d1 migrations apply --local` も `wrangler d1 execute --local` も通る
+- `wrangler types` は D1 バインディングから `DB: D1Database` を正しく生成する
+- vitest-pool-workers 側でも `env.DB` が使え、`readD1Migrations` / `applyD1Migrations` で
+  テスト用 DB にスキーマを流せる
+
+必要な設定:
+
+```jsonc
+"d1_databases": [
+  {
+    "binding": "DB",
+    "database_name": "gym-memo",
+    "database_id": "local-placeholder",   // アカウント作成後に本物へ差し替え
+    "migrations_dir": "apps/api/migrations"
+  }
+]
+```
+
+⚠️ `migrations_dir` を指定しないと wrangler はリポジトリ直下の `./migrations` を見に行き、
+`No migrations present at <repo>/migrations` で失敗する。
+
+**アカウント作成はフェーズ2（デプロイ・ドメイン購入）の直前でよい。**
 
 ### コマンド
 
