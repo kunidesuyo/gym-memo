@@ -2,8 +2,8 @@ import { useForm } from '@tanstack/react-form'
 import { setFormSchema } from 'api/schema/set'
 import { useId } from 'react'
 import { Button } from '@/components/ui/button'
+import { Field, FieldError, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 
 export type SetFormValues = { weightKg: string; reps: string; note: string }
 
@@ -63,7 +63,8 @@ export function SetForm({
             field={field}
             inputMode="decimal"
             placeholder="60"
-            className="w-24 tabular-nums"
+            className="w-24"
+            inputClassName="tabular-nums"
           />
         )}
       </form.Field>
@@ -75,7 +76,8 @@ export function SetForm({
             field={field}
             inputMode="numeric"
             placeholder="10"
-            className="w-20 tabular-nums"
+            className="w-20"
+            inputClassName="tabular-nums"
           />
         )}
       </form.Field>
@@ -87,7 +89,6 @@ export function SetForm({
             field={field}
             placeholder="シート3段目 / 最後きつい"
             className="min-w-40 flex-1"
-            wrapperClassName="min-w-40 flex-1"
           />
         )}
       </form.Field>
@@ -128,14 +129,14 @@ function TextField({
   inputMode,
   placeholder,
   className,
-  wrapperClassName,
+  inputClassName,
 }: {
   label: string
   field: FieldLike
   inputMode?: 'decimal' | 'numeric'
   placeholder: string
   className?: string
-  wrapperClassName?: string
+  inputClassName?: string
 }) {
   // id は field.name（"weightKg" 等の固定値）にしないこと。
   // 追加フォームと編集行の SetForm が同時に描画されると DOM 内で id が重複し、
@@ -144,19 +145,18 @@ function TextField({
   const inputId = `${uid}-${field.name}`
   const errorId = `${inputId}-error`
 
-  const errors: string[] = field.state.meta.errors
-    .map((e) =>
-      typeof e === 'string' ? e : ((e as { message?: string })?.message ?? ''),
-    )
-    .filter(Boolean)
-
+  // FieldError は { message?: string }[] をそのまま受ける。
+  // TanStack Form の errors がちょうどこの形。
+  const errors = field.state.meta.errors as Array<
+    { message?: string } | undefined
+  >
   const hasError = errors.length > 0
 
   return (
-    <div className={`flex flex-col gap-1 ${wrapperClassName ?? ''}`}>
-      <Label htmlFor={inputId} className="text-muted-foreground text-xs">
+    <Field data-invalid={hasError || undefined} className={className}>
+      <FieldLabel htmlFor={inputId} className="text-muted-foreground text-xs">
         {label}
-      </Label>
+      </FieldLabel>
       <Input
         id={inputId}
         name={field.name}
@@ -166,16 +166,12 @@ function TextField({
         onBlur={field.handleBlur}
         onChange={(e) => field.handleChange(e.target.value)}
         aria-invalid={hasError}
-        // エラー文言を入力欄に紐付ける。これが無いとスクリーンリーダーが
-        // 入力欄にフォーカスしたときエラー内容を読み上げない。
+        // FieldError は role="alert" を持つが、入力欄との紐付けまではしないので
+        // aria-describedby は自分で張る
         aria-describedby={hasError ? errorId : undefined}
-        className={className}
+        className={inputClassName}
       />
-      {hasError && (
-        <p id={errorId} role="alert" className="text-destructive text-xs">
-          {errors[0]}
-        </p>
-      )}
-    </div>
+      <FieldError id={errorId} errors={errors} className="text-xs" />
+    </Field>
   )
 }

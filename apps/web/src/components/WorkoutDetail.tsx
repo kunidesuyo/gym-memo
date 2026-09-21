@@ -1,7 +1,8 @@
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
+import { Field, FieldLabel } from '@/components/ui/field'
+import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
 import {
   useAddSet,
   useDeleteSet,
@@ -113,24 +114,27 @@ export function WorkoutDetail({ workoutId }: { workoutId: string }) {
         </p>
       )}
 
-      <div className="flex flex-col gap-1">
-        <Label htmlFor="exercise" className="text-muted-foreground text-xs">
+      <Field>
+        <FieldLabel
+          htmlFor="exercise"
+          className="text-muted-foreground text-xs"
+        >
           種目
-        </Label>
-        <select
+        </FieldLabel>
+        <NativeSelect
+          className="w-full"
           id="exercise"
           value={exerciseId}
           onChange={(e) => setExerciseId(e.target.value)}
-          className="rounded-lg border border-input bg-transparent px-2.5 py-2 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
         >
-          <option value="">選択してください</option>
+          <NativeSelectOption value="">選択してください</NativeSelectOption>
           {exercises.data?.map((e) => (
-            <option key={e.id} value={e.id}>
+            <NativeSelectOption key={e.id} value={e.id}>
               {e.name}
-            </option>
+            </NativeSelectOption>
           ))}
-        </select>
-      </div>
+        </NativeSelect>
+      </Field>
 
       {exerciseId !== '' && (
         <>

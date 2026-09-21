@@ -8,7 +8,13 @@ import {
 } from 'api/schema/exercise'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Label } from '@/components/ui/label'
+import {
+  Field,
+  FieldGroup,
+  FieldLabel,
+  FieldLegend,
+  FieldSet,
+} from '@/components/ui/field'
 
 export type ExerciseFilter = {
   categories: Category[]
@@ -93,6 +99,12 @@ export function ExerciseFilters({
   )
 }
 
+/**
+ * チェックボックス群は FieldSet + FieldLegend で包む。
+ * div + span だと支援技術からグループ名と各項目の関連が見えない。
+ * また ui/checkbox.tsx のフォーカス用クラス（group-has-[:focus-visible]/field-label:*）は
+ * Field / FieldLabel の中に置かれて初めて効く。
+ */
 function Row({
   label,
   children,
@@ -101,12 +113,17 @@ function Row({
   children: React.ReactNode
 }) {
   return (
-    <div className="flex gap-2">
-      <span className="w-8 shrink-0 pt-0.5 text-muted-foreground text-xs">
+    <FieldSet>
+      <FieldLegend
+        variant="label"
+        className="mb-1 text-muted-foreground text-xs"
+      >
         {label}
-      </span>
-      <div className="flex flex-wrap gap-x-3 gap-y-1.5">{children}</div>
-    </div>
+      </FieldLegend>
+      <FieldGroup className="flex-row flex-wrap gap-x-3 gap-y-1.5">
+        {children}
+      </FieldGroup>
+    </FieldSet>
   )
 }
 
@@ -122,11 +139,11 @@ function CheckItem({
   onToggle: () => void
 }) {
   return (
-    <div className="flex items-center gap-1.5">
+    <Field orientation="horizontal" className="w-auto gap-1.5">
       <Checkbox id={id} checked={checked} onCheckedChange={onToggle} />
-      <Label htmlFor={id} className="cursor-pointer text-sm">
+      <FieldLabel htmlFor={id} className="cursor-pointer font-normal text-sm">
         {label}
-      </Label>
-    </div>
+      </FieldLabel>
+    </Field>
   )
 }

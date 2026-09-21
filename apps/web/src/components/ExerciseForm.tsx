@@ -11,8 +11,14 @@ import {
 } from 'api/schema/exercise'
 import { useId } from 'react'
 import { Button } from '@/components/ui/button'
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
 
 export type ExerciseFormValues = {
   name: string
@@ -56,102 +62,102 @@ export function ExerciseForm({
       }}
       className="flex flex-col gap-3"
     >
-      <form.Field name="name">
-        {(field) => {
-          const message = field.state.meta.errors
-            .map((e) => (e as { message?: string })?.message)
-            .filter(Boolean)[0]
-          return (
-            <div className="flex flex-col">
-              <Label
-                htmlFor={`${uid}-${field.name}`}
-                className="mb-1 text-muted-foreground text-xs"
-              >
-                種目名
-              </Label>
-              <Input
-                id={`${uid}-${field.name}`}
-                name={field.name}
-                value={field.state.value}
-                onBlur={field.handleBlur}
-                onChange={(e) => field.handleChange(e.target.value)}
-                aria-invalid={message != null}
-                aria-describedby={
-                  message ? `${uid}-${field.name}-error` : undefined
-                }
-              />
-              {message && (
-                <p
-                  id={`${uid}-${field.name}-error`}
-                  role="alert"
-                  className="mt-1 text-destructive text-xs"
+      <FieldGroup>
+        <form.Field name="name">
+          {(field) => {
+            const errors = field.state.meta.errors as Array<
+              { message?: string } | undefined
+            >
+            const hasError = errors.length > 0
+            const id = `${uid}-name`
+            return (
+              <Field data-invalid={hasError || undefined}>
+                <FieldLabel
+                  htmlFor={id}
+                  className="text-muted-foreground text-xs"
                 >
-                  {message}
-                </p>
-              )}
-            </div>
-          )
-        }}
-      </form.Field>
-
-      <div className="flex gap-2">
-        <form.Field name="muscleGroup">
-          {(field) => (
-            <div className="flex flex-1 flex-col">
-              <Label
-                htmlFor={`${uid}-${field.name}`}
-                className="mb-1 text-muted-foreground text-xs"
-              >
-                部位
-              </Label>
-              <select
-                id={`${uid}-${field.name}`}
-                name={field.name}
-                value={field.state.value}
-                onChange={(e) => {
-                  const next = e.target.value as MuscleGroup
-                  field.handleChange(next)
-                  // 部位を選んだら PPL の既定値を埋める（ユーザーは下で変更できる）
-                  form.setFieldValue('category', defaultCategoryFor[next])
-                }}
-                className="rounded-lg border border-input bg-transparent px-2.5 py-2 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
-              >
-                {muscleGroups.map((m) => (
-                  <option key={m} value={m}>
-                    {muscleGroupLabels[m]}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+                  種目名
+                </FieldLabel>
+                <Input
+                  id={id}
+                  name={field.name}
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  aria-invalid={hasError}
+                  aria-describedby={hasError ? `${id}-error` : undefined}
+                />
+                <FieldError
+                  id={`${id}-error`}
+                  errors={errors}
+                  className="text-xs"
+                />
+              </Field>
+            )
+          }}
         </form.Field>
 
-        <form.Field name="category">
-          {(field) => (
-            <div className="flex flex-1 flex-col">
-              <Label
-                htmlFor={`${uid}-${field.name}`}
-                className="mb-1 text-muted-foreground text-xs"
-              >
-                分割
-              </Label>
-              <select
-                id={`${uid}-${field.name}`}
-                name={field.name}
-                value={field.state.value}
-                onChange={(e) => field.handleChange(e.target.value as Category)}
-                className="rounded-lg border border-input bg-transparent px-2.5 py-2 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
-              >
-                {categories.map((c) => (
-                  <option key={c} value={c}>
-                    {categoryLabels[c]}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-        </form.Field>
-      </div>
+        <div className="flex gap-2">
+          <form.Field name="muscleGroup">
+            {(field) => (
+              <Field className="flex-1">
+                <FieldLabel
+                  htmlFor={`${uid}-muscleGroup`}
+                  className="text-muted-foreground text-xs"
+                >
+                  部位
+                </FieldLabel>
+                <NativeSelect
+                  className="w-full"
+                  id={`${uid}-muscleGroup`}
+                  name={field.name}
+                  value={field.state.value}
+                  onChange={(e) => {
+                    const next = e.target.value as MuscleGroup
+                    field.handleChange(next)
+                    // 部位を選んだら PPL の既定値を埋める（ユーザーは下で変更できる）
+                    form.setFieldValue('category', defaultCategoryFor[next])
+                  }}
+                >
+                  {muscleGroups.map((m) => (
+                    <NativeSelectOption key={m} value={m}>
+                      {muscleGroupLabels[m]}
+                    </NativeSelectOption>
+                  ))}
+                </NativeSelect>
+              </Field>
+            )}
+          </form.Field>
+
+          <form.Field name="category">
+            {(field) => (
+              <Field className="flex-1">
+                <FieldLabel
+                  htmlFor={`${uid}-category`}
+                  className="text-muted-foreground text-xs"
+                >
+                  分割
+                </FieldLabel>
+                <NativeSelect
+                  className="w-full"
+                  id={`${uid}-category`}
+                  name={field.name}
+                  value={field.state.value}
+                  onChange={(e) =>
+                    field.handleChange(e.target.value as Category)
+                  }
+                >
+                  {categories.map((c) => (
+                    <NativeSelectOption key={c} value={c}>
+                      {categoryLabels[c]}
+                    </NativeSelectOption>
+                  ))}
+                </NativeSelect>
+              </Field>
+            )}
+          </form.Field>
+        </div>
+      </FieldGroup>
 
       {error && (
         <p role="alert" className="text-destructive text-sm">
