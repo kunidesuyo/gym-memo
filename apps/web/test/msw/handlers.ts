@@ -1,3 +1,4 @@
+import type { NewExercise } from 'api/schema/exercise'
 import { delay, HttpResponse, http } from 'msw'
 import type {
   Exercise,
@@ -23,6 +24,7 @@ export const exercisesFixture: Exercise[] = [
     category: 'push',
     muscleGroup: 'chest',
     createdAt: '2026-09-01',
+    setCount: 12,
   },
   {
     id: '01a0bf17-b376-7779-828a-e1cdd8f5e8ea',
@@ -30,6 +32,7 @@ export const exercisesFixture: Exercise[] = [
     category: 'legs',
     muscleGroup: 'quads',
     createdAt: '2026-09-01',
+    setCount: 8,
   },
   {
     id: '01a0bf17-b376-7779-828a-000000000003',
@@ -37,6 +40,7 @@ export const exercisesFixture: Exercise[] = [
     category: 'pull',
     muscleGroup: 'back',
     createdAt: '2026-09-01',
+    setCount: 3,
   },
   {
     id: '01a0bf17-b376-7779-828a-000000000004',
@@ -44,6 +48,7 @@ export const exercisesFixture: Exercise[] = [
     category: 'push',
     muscleGroup: 'shoulders',
     createdAt: '2026-09-01',
+    setCount: 0,
   },
 ]
 
@@ -171,7 +176,7 @@ export const handlers = [
   http.get('/api/exercises', () => HttpResponse.json(exercisesFixture)),
 
   http.post('/api/exercises', async ({ request }) => {
-    const body = (await request.json()) as Omit<Exercise, 'id' | 'createdAt'>
+    const body = (await request.json()) as NewExercise
     return HttpResponse.json(
       {
         id: '01a0bf22-0000-7000-8000-000000000003',
@@ -183,10 +188,11 @@ export const handlers = [
   }),
 
   http.patch('/api/exercises/:id', async ({ request, params }) => {
-    const body = (await request.json()) as Omit<Exercise, 'id' | 'createdAt'>
+    const body = (await request.json()) as NewExercise
     return HttpResponse.json({
       id: String(params.id),
       createdAt: '2026-09-01',
+      setCount: 0,
       ...body,
     })
   }),

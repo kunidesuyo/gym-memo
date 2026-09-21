@@ -5,13 +5,14 @@ import { renderWithRouter } from '../../test/utils'
 import { ExerciseManager } from './ExerciseManager'
 
 /**
- * 一覧に見えている種目名。リンクは <span>部位</span><span>名前</span> の形なので末尾を読む。
+ * 一覧に見えている種目名。
+ * リンクは <span>部位</span><span>名前</span><span>N セット</span> の形。
  * 絞り込み後は0件もありうるので、特定の名前を待たない作りにしてある。
  */
 function visibleNames() {
   return screen
     .queryAllByRole('link')
-    .map((a) => a.querySelector('span:last-child')?.textContent ?? '')
+    .map((a) => a.querySelector('span:nth-child(2)')?.textContent ?? '')
 }
 
 describe('ExerciseManager', () => {

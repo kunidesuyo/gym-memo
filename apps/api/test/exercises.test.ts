@@ -1,5 +1,6 @@
 import { exports } from 'cloudflare:workers'
 import { beforeEach, describe, expect, it } from 'vitest'
+
 import { addSet, createWorkout } from '../src/db/queries'
 import { resetDb, seedExercises, testDb } from './helpers'
 
@@ -9,11 +10,13 @@ const MISSING_ID = '01a0bf17-0000-7000-8000-000000000000'
 const BASE = 'https://example.com'
 
 let benchId: string
+let squatId: string
 
 beforeEach(async () => {
   await resetDb()
-  const { bench } = await seedExercises()
+  const { bench, squat } = await seedExercises()
   benchId = bench.id
+  squatId = squat.id
 })
 
 function send(method: string, path: string, body?: unknown) {
@@ -152,5 +155,38 @@ describe('DELETE /api/exercises/:id', () => {
   it('存在しない ID は 404', async () => {
     const res = await send('DELETE', `/api/exercises/${MISSING_ID}`)
     expect(res.status).toBe(404)
+  })
+})
+
+describe('種目一覧の並び順', () => {
+  it('セット数の多い順に並ぶ（記録画面の select がそのまま使える）', async () => {
+    const db = testDb()
+    const w = await createWorkout(db, '2026-09-21')
+
+    // スクワットを3セット、ベンチを1セット
+    for (const weight of [100, 105, 110]) {
+      await addSet(db, w.id, { exerciseId: squatId, weightKg: weight, reps: 5 })
+    }
+    await addSet(db, w.id, { exerciseId: benchId, weightKg: 60, reps: 10 })
+
+    const res = await exports.default.fetch(`${BASE}/api/exercises`)
+    const rows = (await res.json()) as { name: string; setCount: number }[]
+
+    expect(rows.map((r) => [r.name, r.setCount])).toEqual([
+      ['スクワット', 3],
+      ['ベンチプレス', 1],
+    ])
+  })
+
+  it('記録が無い種目は setCount 0 で末尾に来る', async () => {
+    const db = testDb()
+    const w = await createWorkout(db, '2026-09-21')
+    await addSet(db, w.id, { exerciseId: benchId, weightKg: 60, reps: 10 })
+
+    const res = await exports.default.fetch(`${BASE}/api/exercises`)
+    const rows = (await res.json()) as { name: string; setCount: number }[]
+
+    expect(rows[0]).toMatchObject({ name: 'ベンチプレス', setCount: 1 })
+    expect(rows[rows.length - 1]).toMatchObject({ setCount: 0 })
   })
 })

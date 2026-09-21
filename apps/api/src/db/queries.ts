@@ -3,15 +3,30 @@ import type { NewExercise } from '../schema/exercise'
 import type { Db } from './index'
 import { exercises, sets, workouts } from './schema'
 
+/**
+ * 種目一覧。記録済みのセット数を添える。
+ *
+ * 並びは**セット数の多い順**。よく使う種目が上に来るので、
+ * 記録画面の種目選択がそのまま使える（種目が50件を超えるため）。
+ */
 export function listExercises(
   db: Db,
   category?: 'push' | 'pull' | 'legs' | 'other',
 ) {
   return db
-    .select()
+    .select({
+      id: exercises.id,
+      name: exercises.name,
+      category: exercises.category,
+      muscleGroup: exercises.muscleGroup,
+      createdAt: exercises.createdAt,
+      setCount: count(sets.id),
+    })
     .from(exercises)
+    .leftJoin(sets, eq(sets.exerciseId, exercises.id))
     .where(category ? eq(exercises.category, category) : undefined)
-    .orderBy(exercises.category, exercises.muscleGroup, exercises.name)
+    .groupBy(exercises.id)
+    .orderBy(desc(count(sets.id)), exercises.name)
 }
 
 export async function getExercise(db: Db, id: string) {

@@ -90,6 +90,9 @@ export function ExerciseManager() {
                       {muscleGroupLabels[e.muscleGroup as MuscleGroup]}
                     </span>
                     <span className="flex-1">{e.name}</span>
+                    <span className="shrink-0 text-muted-foreground text-xs tabular-nums">
+                      {e.setCount} セット
+                    </span>
                   </Link>
                 </li>
               ))}

@@ -48,6 +48,24 @@ describe('WorkoutDetail', () => {
     expect(screen.queryByRole('button', { name: '記録する' })).toBeNull()
   })
 
+  it('種目の選択肢はセット数の多い順に並ぶ', async () => {
+    renderWithRouter(<WorkoutDetail workoutId={WORKOUT_ID} />)
+    await screen.findByRole('option', { name: 'ベンチプレス' })
+
+    const options = screen
+      .getAllByRole('option')
+      .map((o) => o.textContent)
+      .filter((t) => t !== '選択してください')
+
+    // フィクスチャのセット数: ベンチ12 / スクワット8 / ラットプル3 / サイドレイズ0
+    expect(options).toEqual([
+      'ベンチプレス',
+      'スクワット',
+      'ラットプルダウン',
+      'サイドレイズ',
+    ])
+  })
+
   it('種目を選ぶと前回の記録を表示する', async () => {
     renderWithRouter(<WorkoutDetail workoutId={WORKOUT_ID} />)
     await selectBenchPress()
