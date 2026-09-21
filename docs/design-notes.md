@@ -1829,7 +1829,7 @@ claude plugin install cloudflare@cloudflare --scope project
 ファイルは `.agents/skills/` に置かれ、`.claude/skills/` からシンボリックリンクが張られる
 （Codex / Cursor / Gemini CLI など他エージェントとの共用レイアウト）。
 
-### TanStack Intent は未完了（要手動実行）
+### TanStack Intent（完了。ただし落とし穴あり）
 
 仕組みが他と違う。**スキルを project にコピーせず、`CLAUDE.md` に
 「node_modules のスキルを必要に応じて読め」という案内を書く**方式。
@@ -1839,8 +1839,42 @@ npx @tanstack/intent@latest install --review
 ```
 
 ⚠️ **初回は対話的な権限確認が必須**で、非対話では
-`intent.skills is not configured` で失敗する。許可リストを手で推測して書くのは
-権限付与を誤るリスクがあるため、**ユーザーが端末で実行する**ことにした。
+`intent.skills is not configured` で失敗する。
+Claude Code の `!` 経由でも TTY が無いため失敗した。**素のターミナルで実行する必要がある。**
+
+実行結果:
+- `package.json` に `"intent": { "skills": ["*"] }` が入った（**ワイルドカード = 全ソース許可**。
+  今後スキルを同梱するパッケージが増えたら自動で許可される点に注意）
+- **`AGENTS.md`** が生成され、`<!-- intent-skills:start -->` ブロックに
+  「作業前に `intent list` で探し、該当すれば `intent load` してから編集せよ」という案内が入った
+
+### ⚠️ AGENTS.md は そのままでは読まれない
+
+Claude Code の既定は `claude-md-or-agents-md`:
+
+| リポジトリの状態 | Claude が読むもの |
+|---|---|
+| AGENTS.md のみ | AGENTS.md |
+| **AGENTS.md と CLAUDE.md の両方** | **CLAUDE.md だけ** |
+| CLAUDE.md が AGENTS.md を import | 両方 |
+
+**このプロジェクトは CLAUDE.md を作った直後だったので、AGENTS.md が無視される状態だった。**
+
+→ `CLAUDE.md` の先頭に **`@AGENTS.md`** のインポートを置いて解決した。
+   `/config` の Project instructions を `claude-md-and-agents-md` にする手もあるが、
+   それは**各自の設定**なので clone した人には伝わらない。インポートならリポジトリで完結する。
+
+動作確認:
+
+```
+$ pnpm dlx @tanstack/intent@latest load @tanstack/router-core#router-core/search-params
+name: search-params
+description: validateSearch, search param validation with Zod/Valibot/ArkType adapters, ...
+metadata: { library: tanstack-router, library_version: '1.171.15' }
+sources: TanStack/router:docs/router/guide/search-params.md ...
+```
+
+公式ドキュメント由来で、**インストール済みバージョンに紐づいた**内容が返る。
 
 `list` で確認できた提供範囲（このリポジトリのインストール済みバージョン時点）:
 

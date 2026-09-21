@@ -1,3 +1,5 @@
+@AGENTS.md
+
 # gym-memo
 
 自分専用の筋トレ記録アプリ。**技術学習が主目的**（TanStack 系 → Terraform/Cloudflare の順で優先）。
@@ -96,3 +98,11 @@ web が型解決するのはこのファイルだけ（`api/routes` として ex
 アカウント作成とドメイン購入がそこで必要になる。
 
 バックログ（画像アップロード/R2、グラフ、PR、オフライン対応 など）は `docs/design-notes.md` 15章。
+
+## AGENTS.md について
+
+冒頭の `@AGENTS.md` は TanStack Intent が書いたスキル読み込み案内を取り込むためのもの。
+
+⚠️ **CLAUDE.md がある場合、Claude Code は AGENTS.md を読まない**（CLAUDE.md が優先される）。
+このインポートが無いと Intent の案内が効かなくなるので消さないこと。
+AGENTS.md は Codex / Cursor など他エージェントとの共有ファイルでもある。
