@@ -1,0 +1,27 @@
+{
+  "extraKnownMarketplaces": {
+    "cloudflare": {
+      "source": {
+        "source": "github",
+        "repo": "cloudflare/skills"
+      }
+    },
+    "hono": {
+      "source": {
+        "source": "github",
+        "repo": "honojs/skills"
+      }
+    },
+    "hashicorp": {
+      "source": {
+        "source": "github",
+        "repo": "hashicorp/agent-skills"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "cloudflare@cloudflare": true,
+    "hono@hono": true,
+    "terraform@hashicorp": true
+  }
+}

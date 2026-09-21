@@ -538,6 +538,7 @@ sets             1セットの記録（このアプリの主役テーブル）
 | 2026-09-21 | UI | **shadcn/ui を導入**（20章）。基盤は Base UI。`form` は react-hook-form と競合するため入れない |
 | 2026-09-21 | UI | 種目画面を整理（21章）。一覧は探す用・詳細は操作用。絞り込みはクライアント側 |
 | 2026-09-21 | 不具合 | 削除時に `isError` をクロージャから読んでおり、失敗しても遷移していた（21章）。2画面で修正 |
+| 2026-09-21 | 環境 | **公式 Agent Skills を5件導入**（22章）。野良は不採用。TanStack Intent のみ手動実行が残る |
 
 ## 11. テスト戦略 —— 【決定 2026-09-20】
 
@@ -1768,4 +1769,94 @@ MSW フィクスチャに `id: 11` という数値 ID が残っていた（17章
 
 一覧側: 絞り込みの OR / AND / クリア、編集削除ボタンが無いこと、モーダルの開閉。
 詳細側: 編集モーダルの初期値、削除の確認、409 の理由表示、**失敗時に遷移しないこと**。
+
+## 22. 公式 Agent Skills の導入 —— 2026-09-21
+
+### 方針: 公式のみ。野良は入れない
+
+技術スタックごとに調査した結果、**公式 Skills が存在したのは5件**だった。
+
+| 技術 | 提供元 | 配布 | 導入方法 |
+|---|---|---|---|
+| Cloudflare | Cloudflare | [cloudflare/skills](https://github.com/cloudflare/skills) | プラグイン（project スコープ） |
+| Hono | Hono | [honojs/skills](https://github.com/honojs/skills) | プラグイン（project スコープ） |
+| Terraform | HashiCorp | [hashicorp/agent-skills](https://github.com/hashicorp/agent-skills) | プラグイン（project スコープ） |
+| shadcn/ui | shadcn | shadcn-ui/ui の `/skills/` | `pnpm dlx skills add shadcn/ui` |
+| TanStack Router | TanStack | **npm パッケージに同梱** | TanStack Intent（**未完了**・後述） |
+
+**公式が存在しなかったもの**: TanStack Query / Form（Router のみ同梱）、Drizzle ORM、Zod、
+Vite、Vitest、Biome、MSW、Tailwind CSS、Base UI / MUI、pnpm、TypeScript。
+
+### ⚠️ 紛らわしい罠
+
+**`tanstack-skills/tanstack-skills`** は組織名が公式っぽいが、
+リポジトリ自身が **"UNOFFICIAL Claude Code TanStack Skills"** と明記している。検索上位に出るので注意。
+
+Drizzle / Tailwind / MUI で出てくるものも、確認した限りすべて個人・第三者アカウントだった。
+
+### プロジェクトスコープで入れた理由
+
+`--scope project` を付けると `.claude/settings.json` に書かれ、リポジトリで共有される。
+
+```bash
+claude plugin install cloudflare@cloudflare --scope project
+```
+
+ただし**マーケットプレイスの登録はユーザー設定に入る**ため、それだけでは clone した人に伝わらない。
+`.claude/settings.json` に `extraKnownMarketplaces` を明記して、リポジトリだけで完結するようにした。
+
+```json
+{
+  "extraKnownMarketplaces": {
+    "cloudflare": { "source": { "source": "github", "repo": "cloudflare/skills" } },
+    "hono":       { "source": { "source": "github", "repo": "honojs/skills" } },
+    "hashicorp":  { "source": { "source": "github", "repo": "hashicorp/agent-skills" } }
+  },
+  "enabledPlugins": { ... }
+}
+```
+
+### shadcn は配布経路が別
+
+`skills` CLI（**vercel-labs/skills**、Guillermo Rauch 保守）経由。
+これは配布ツールであってスキル本体ではない。**中身は `skills-lock.json` で
+`source: "shadcn/ui"` と検証できた**ので公式で間違いない。
+
+入ったのは2つ:
+- `shadcn` — CLI、レジストリ、テーマ、base ライブラリ（base/radix/aria）の選択
+- **`migrate-radix-to-base`** — Radix → Base UI 移行。20章で Base UI を選んだ構成に直結する
+
+ファイルは `.agents/skills/` に置かれ、`.claude/skills/` からシンボリックリンクが張られる
+（Codex / Cursor / Gemini CLI など他エージェントとの共用レイアウト）。
+
+### TanStack Intent は未完了（要手動実行）
+
+仕組みが他と違う。**スキルを project にコピーせず、`CLAUDE.md` に
+「node_modules のスキルを必要に応じて読め」という案内を書く**方式。
+
+```bash
+npx @tanstack/intent@latest install --review
+```
+
+⚠️ **初回は対話的な権限確認が必須**で、非対話では
+`intent.skills is not configured` で失敗する。許可リストを手で推測して書くのは
+権限付与を誤るリスクがあるため、**ユーザーが端末で実行する**ことにした。
+
+`list` で確認できた提供範囲（このリポジトリのインストール済みバージョン時点）:
+
+```
+@tanstack/router-plugin   router-plugin
+@tanstack/router-core     router-core
+    auth-and-guards / code-splitting / data-loading / navigation
+    not-found-and-errors / path-params / search-params / ssr / type-safety
+@tanstack/virtual-file-routes
+```
+
+`search-params` はバックログ7番（Router の search params 活用）に直結する。
+**Query と Form は未提供**（`package.json` に `intent` フィールドが無い）。
+
+### CLAUDE.md を追加した
+
+毎セッション読まれるので、**破ると壊れる規約**と**意図的にそうしている箇所**に絞った。
+経緯の説明はこのドキュメント（design-notes.md）に任せ、CLAUDE.md からは参照するだけにしてある。
 
