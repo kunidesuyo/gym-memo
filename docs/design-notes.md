@@ -1781,7 +1781,7 @@ MSW フィクスチャに `id: 11` という数値 ID が残っていた（17章
 | Cloudflare | Cloudflare | [cloudflare/skills](https://github.com/cloudflare/skills) | プラグイン（project スコープ） |
 | Hono | Hono | [honojs/skills](https://github.com/honojs/skills) | プラグイン（project スコープ） |
 | Terraform | HashiCorp | [hashicorp/agent-skills](https://github.com/hashicorp/agent-skills) | プラグイン（project スコープ） |
-| shadcn/ui | shadcn | shadcn-ui/ui の `/skills/` | `pnpm dlx skills add shadcn/ui` |
+| shadcn/ui | shadcn | shadcn-ui/ui の `/skills/` | `gh skill install shadcn/ui --all --agent claude-code --scope project` |
 | TanStack Router | TanStack | **npm パッケージに同梱** | TanStack Intent（**未完了**・後述） |
 
 **公式が存在しなかったもの**: TanStack Query / Form（Router のみ同梱）、Drizzle ORM、Zod、
@@ -1816,18 +1816,54 @@ claude plugin install cloudflare@cloudflare --scope project
 }
 ```
 
-### shadcn は配布経路が別
-
-`skills` CLI（**vercel-labs/skills**、Guillermo Rauch 保守）経由。
-これは配布ツールであってスキル本体ではない。**中身は `skills-lock.json` で
-`source: "shadcn/ui"` と検証できた**ので公式で間違いない。
+### shadcn は配布経路が別 —— 最終的に `gh skill` に統一
 
 入ったのは2つ:
 - `shadcn` — CLI、レジストリ、テーマ、base ライブラリ（base/radix/aria）の選択
 - **`migrate-radix-to-base`** — Radix → Base UI 移行。20章で Base UI を選んだ構成に直結する
 
-ファイルは `.agents/skills/` に置かれ、`.claude/skills/` からシンボリックリンクが張られる
-（Codex / Cursor / Gemini CLI など他エージェントとの共用レイアウト）。
+**当初は shadcn 公式が案内する `pnpm dlx skills add shadcn/ui`**（vercel-labs/skills）で入れた。
+これは `.agents/skills/` に実体を置き `.claude/skills/` からシンボリックリンクを張る方式で、
+Codex / Cursor など他エージェントとの共用を前提にしたレイアウト。
+
+**しかし AGENTS.md を廃止して Claude Code 一本に寄せた（上記）ので、方針がちぐはぐになった。**
+他エージェント共用を捨てたのに、共用前提の `.agents/` を残しているのは一貫しない。
+
+→ **`gh skill` に切り替えた。**
+
+```bash
+gh skill install shadcn/ui --all --agent claude-code --scope project
+```
+
+両者を実際に入れて比較したところ、**ファイル構成（25ファイル）と本文は完全に同一**。
+差は `SKILL.md` の frontmatter だけだった。
+
+| | skills CLI | **gh skill（採用）** |
+|---|---|---|
+| 配置 | `.agents/skills/` + シンボリックリンク | **`.claude/skills/` に実体のみ** |
+| 他エージェント共用 | ⭕️ | ❌（`--agent` ごとに複製） |
+| 出所の記録 | `skills-lock.json`（ハッシュのみ） | **SKILL.md の frontmatter に埋め込み** |
+| バージョン固定 | ❌ | **`--pin`** |
+| 事前確認 | ❌ | **`gh skill preview`** |
+| Windows のリンク問題 | あり | **無い** |
+
+出所メタデータは frontmatter に入るので、**ファイルがどこにコピーされても追跡できる**。
+
+```yaml
+metadata:
+    github-repo: https://github.com/shadcn/ui
+    github-ref: refs/tags/shadcn@4.21.0      # リリースタグが分かる
+    github-tree-sha: b5791523e07794a4deb201e78eab3f3adbd022c0
+    github-path: skills/shadcn
+```
+
+インストール時に **「Skills may contain prompt injections or malicious scripts」** の警告と、
+SHA 付きの検証コマンドが表示されるのも良い。
+
+⚠️ **2つのツールを混ぜないこと。** frontmatter のキー順とメタデータの有無が違うため、
+`skills update` と `gh skill update` を両方回すと書き換え合戦になる。
+
+更新は `gh skill update --all`。
 
 ### TanStack Intent（完了。ただし落とし穴あり）
 
@@ -1873,9 +1909,8 @@ Intent は AGENTS.md / CLAUDE.md / .cursorrules / copilot-instructions.md を
 ⚠️ トレードオフ: AGENTS.md は Codex / Cursor など**他エージェントとの共有ファイル**でもある。
 今後それらを併用するなら AGENTS.md を復活させて `@AGENTS.md` インポートに戻すほうがよい。
 
-⚠️ **`.agents/` ディレクトリと `AGENTS.md` は無関係**。名前が紛らわしいが、
-前者は shadcn スキルの実体置き場（`.claude/skills/` からシンボリックリンク）で、
-AGENTS.md を消しても影響しない。
+⚠️ 当時 `.agents/` ディレクトリがあったが、`AGENTS.md` とは無関係だった
+（前者は shadcn スキルの実体置き場）。その後 `gh skill` に切り替えて `.agents/` は廃止した。
 
 動作確認:
 
