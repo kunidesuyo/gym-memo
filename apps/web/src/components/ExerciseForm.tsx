@@ -9,6 +9,9 @@ import {
   muscleGroups,
   newExerciseSchema,
 } from 'api/schema/exercise'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 
 export type ExerciseFormValues = {
   name: string
@@ -47,7 +50,7 @@ export function ExerciseForm({
         e.preventDefault()
         form.handleSubmit()
       }}
-      className="flex flex-col gap-3 rounded-lg border border-slate-300 p-3 dark:border-slate-700"
+      className="flex flex-col gap-3 rounded-lg border p-3"
     >
       <form.Field name="name">
         {(field) => {
@@ -56,23 +59,27 @@ export function ExerciseForm({
             .filter(Boolean)[0]
           return (
             <div className="flex flex-col">
-              <label
+              <Label
                 htmlFor={field.name}
-                className="mb-1 text-slate-500 text-xs"
+                className="mb-1 text-muted-foreground text-xs"
               >
                 種目名
-              </label>
-              <input
+              </Label>
+              <Input
                 id={field.name}
                 name={field.name}
                 value={field.state.value}
                 onBlur={field.handleBlur}
                 onChange={(e) => field.handleChange(e.target.value)}
                 aria-invalid={message != null}
-                className="rounded-md border border-slate-300 px-2 py-2 text-base dark:border-slate-700 dark:bg-slate-900"
+                aria-describedby={message ? `${field.name}-error` : undefined}
               />
               {message && (
-                <p role="alert" className="mt-1 text-red-600 text-xs">
+                <p
+                  id={`${field.name}-error`}
+                  role="alert"
+                  className="mt-1 text-destructive text-xs"
+                >
                   {message}
                 </p>
               )}
@@ -85,12 +92,12 @@ export function ExerciseForm({
         <form.Field name="muscleGroup">
           {(field) => (
             <div className="flex flex-1 flex-col">
-              <label
+              <Label
                 htmlFor={field.name}
-                className="mb-1 text-slate-500 text-xs"
+                className="mb-1 text-muted-foreground text-xs"
               >
                 部位
-              </label>
+              </Label>
               <select
                 id={field.name}
                 name={field.name}
@@ -101,7 +108,7 @@ export function ExerciseForm({
                   // 部位を選んだら PPL の既定値を埋める（ユーザーは下で変更できる）
                   form.setFieldValue('category', defaultCategoryFor[next])
                 }}
-                className="rounded-md border border-slate-300 px-2 py-2 text-base dark:border-slate-700 dark:bg-slate-900"
+                className="rounded-lg border border-input bg-transparent px-2.5 py-2 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
               >
                 {muscleGroups.map((m) => (
                   <option key={m} value={m}>
@@ -116,18 +123,18 @@ export function ExerciseForm({
         <form.Field name="category">
           {(field) => (
             <div className="flex flex-1 flex-col">
-              <label
+              <Label
                 htmlFor={field.name}
-                className="mb-1 text-slate-500 text-xs"
+                className="mb-1 text-muted-foreground text-xs"
               >
                 分割
-              </label>
+              </Label>
               <select
                 id={field.name}
                 name={field.name}
                 value={field.state.value}
                 onChange={(e) => field.handleChange(e.target.value as Category)}
-                className="rounded-md border border-slate-300 px-2 py-2 text-base dark:border-slate-700 dark:bg-slate-900"
+                className="rounded-lg border border-input bg-transparent px-2.5 py-2 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
               >
                 {categories.map((c) => (
                   <option key={c} value={c}>
@@ -141,7 +148,7 @@ export function ExerciseForm({
       </div>
 
       {error && (
-        <p role="alert" className="text-red-600 text-sm">
+        <p role="alert" className="text-destructive text-sm">
           {error.message}
         </p>
       )}
@@ -149,22 +156,14 @@ export function ExerciseForm({
       <div className="flex gap-2">
         <form.Subscribe selector={(s) => s.isSubmitting}>
           {(isSubmitting) => (
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="rounded-md bg-slate-900 px-4 py-2 font-medium text-sm text-white disabled:opacity-40 dark:bg-slate-100 dark:text-slate-900"
-            >
+            <Button type="submit" disabled={isSubmitting}>
               {submitLabel}
-            </button>
+            </Button>
           )}
         </form.Subscribe>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="rounded-md border border-slate-300 px-4 py-2 text-sm dark:border-slate-700"
-        >
+        <Button type="button" variant="outline" onClick={onCancel}>
           キャンセル
-        </button>
+        </Button>
       </div>
     </form>
   )

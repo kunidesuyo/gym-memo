@@ -13,7 +13,7 @@ export function ExerciseHistory({ exerciseId }: { exerciseId: string }) {
   if (history.isPending) return <p>読み込み中...</p>
   if (history.error)
     return (
-      <p role="alert" className="text-red-600">
+      <p role="alert" className="text-destructive">
         {history.error.message}
       </p>
     )
@@ -24,14 +24,14 @@ export function ExerciseHistory({ exerciseId }: { exerciseId: string }) {
     <div className="flex flex-col gap-4">
       <header>
         <h1 className="font-bold text-xl">{exercise.name}</h1>
-        <p className="text-slate-500 text-xs">
+        <p className="text-muted-foreground text-xs">
           {categoryLabels[exercise.category as Category]} ·{' '}
           {muscleGroupLabels[exercise.muscleGroup as MuscleGroup]}
         </p>
       </header>
 
       {sessions.length === 0 ? (
-        <p className="text-slate-400 text-sm">まだ記録がありません</p>
+        <p className="text-muted-foreground text-sm">まだ記録がありません</p>
       ) : (
         <div className="flex flex-col gap-4">
           {sessions.map((s) => (
@@ -51,12 +51,14 @@ export function ExerciseHistory({ exerciseId }: { exerciseId: string }) {
                     key={set.id}
                     className="flex gap-2 py-0.5 text-sm tabular-nums"
                   >
-                    <span className="w-5 text-slate-400">{set.setOrder}.</span>
+                    <span className="w-5 text-muted-foreground">
+                      {set.setOrder}.
+                    </span>
                     <span className="font-medium">{set.weightKg}kg</span>
-                    <span className="text-slate-400">×</span>
+                    <span className="text-muted-foreground">×</span>
                     <span>{set.reps}回</span>
                     {set.note && (
-                      <span className="truncate text-slate-500 text-xs">
+                      <span className="truncate text-muted-foreground text-xs">
                         {set.note}
                       </span>
                     )}

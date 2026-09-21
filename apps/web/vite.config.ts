@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url'
 import tailwindcss from '@tailwindcss/vite'
 import { tanstackRouter } from '@tanstack/router-plugin/vite'
 import react from '@vitejs/plugin-react'
@@ -10,6 +11,12 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  resolve: {
+    // shadcn/ui が前提にする @/ エイリアス。tsconfig の paths と対で設定する。
+    alias: {
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+    },
+  },
   server: {
     // 既定の 5173 は他プロジェクトと衝突しやすい。専用ポートを明示し、
     // strictPort で「黙って別ポートにずれる」のを防ぐ（proxy 先とズレると原因が分かりにくいため）。

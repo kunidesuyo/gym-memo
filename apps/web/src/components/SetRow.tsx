@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Button } from '@/components/ui/button'
 import type { WorkoutSet } from '../api/hooks'
 import { SetForm } from './SetForm'
 
@@ -42,30 +43,35 @@ export function SetRow({
 
   return (
     <li className="flex items-center gap-2 py-1 text-sm">
-      <span className="w-5 shrink-0 text-slate-400 tabular-nums">
+      <span className="w-5 shrink-0 text-muted-foreground tabular-nums">
         {set.setOrder}.
       </span>
       <span className="font-medium tabular-nums">{set.weightKg}kg</span>
-      <span className="text-slate-400">×</span>
+      <span className="text-muted-foreground">×</span>
       <span className="tabular-nums">{set.reps}回</span>
       {set.note && (
-        <span className="truncate text-slate-500 text-xs">{set.note}</span>
+        <span className="truncate text-muted-foreground text-xs">
+          {set.note}
+        </span>
       )}
       <span className="flex-1" />
-      <button
+      <Button
         type="button"
+        variant="ghost"
+        size="xs"
         onClick={() => setEditing(true)}
-        className="text-slate-500 text-xs underline underline-offset-2"
       >
         編集
-      </button>
-      <button
+      </Button>
+      <Button
         type="button"
+        variant="ghost"
+        size="xs"
         onClick={onDelete}
-        className="text-red-600 text-xs underline underline-offset-2"
+        className="text-destructive"
       >
         削除
-      </button>
+      </Button>
     </li>
   )
 }

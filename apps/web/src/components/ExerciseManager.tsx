@@ -7,6 +7,7 @@ import {
   muscleGroupLabels,
 } from 'api/schema/exercise'
 import { useState } from 'react'
+import { Button } from '@/components/ui/button'
 import {
   type Exercise,
   useCreateExercise,
@@ -34,16 +35,16 @@ export function ExerciseManager() {
       <header className="flex items-center justify-between">
         <h1 className="font-bold text-xl">種目</h1>
         {editing === null && (
-          <button
+          <Button
             type="button"
+            size="sm"
             onClick={() => {
               create.reset()
               setEditing({ mode: 'new' })
             }}
-            className="rounded-md bg-slate-900 px-3 py-2 font-medium text-sm text-white dark:bg-slate-100 dark:text-slate-900"
           >
             追加
-          </button>
+          </Button>
         )}
       </header>
 
@@ -77,7 +78,7 @@ export function ExerciseManager() {
       )}
 
       {remove.error && (
-        <p role="alert" className="text-red-600 text-sm">
+        <p role="alert" className="text-destructive text-sm">
           {remove.error.message}
         </p>
       )}
@@ -89,13 +90,13 @@ export function ExerciseManager() {
         if (rows.length === 0) return null
         return (
           <section key={c}>
-            <h2 className="mb-1 font-medium text-slate-500 text-xs">
+            <h2 className="mb-1 font-medium text-muted-foreground text-xs">
               {categoryLabels[c]}
             </h2>
-            <ul className="divide-y divide-slate-200 dark:divide-slate-800">
+            <ul className="divide-y divide-border">
               {rows.map((e) => (
                 <li key={e.id} className="flex items-center gap-2 py-2">
-                  <span className="w-16 shrink-0 text-slate-400 text-xs">
+                  <span className="w-16 shrink-0 text-muted-foreground text-xs">
                     {muscleGroupLabels[e.muscleGroup as MuscleGroup]}
                   </span>
                   <Link
@@ -105,28 +106,31 @@ export function ExerciseManager() {
                   >
                     {e.name}
                   </Link>
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="xs"
                     onClick={() => {
                       update.reset()
                       remove.reset()
                       setEditing({ mode: 'edit', exercise: e })
                     }}
-                    className="text-slate-500 text-sm underline underline-offset-2"
                   >
                     編集
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="xs"
+                    className="text-destructive"
                     onClick={() => {
                       remove.reset()
                       // 使用中なら API が 409 を返し、その文言を上に表示する
                       remove.mutate(e.id)
                     }}
-                    className="text-red-600 text-sm underline underline-offset-2"
                   >
                     削除
-                  </button>
+                  </Button>
                 </li>
               ))}
             </ul>

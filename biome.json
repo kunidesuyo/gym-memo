@@ -6,7 +6,9 @@
       "!**/dist",
       "!**/.wrangler",
       "!**/worker-configuration.d.ts",
-      "!**/routeTree.gen.ts"
+      "!**/routeTree.gen.ts",
+      "!**/components/ui",
+      "!**/src/index.css"
     ]
   },
   "formatter": {

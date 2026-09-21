@@ -1,5 +1,7 @@
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
+import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
 import {
   useAddSet,
   useDeleteSet,
@@ -49,7 +51,7 @@ export function WorkoutDetail({ workoutId }: { workoutId: string }) {
   if (workout.isPending) return <p>読み込み中...</p>
   if (workout.error)
     return (
-      <p role="alert" className="text-red-600">
+      <p role="alert" className="text-destructive">
         {workout.error.message}
       </p>
     )
@@ -66,50 +68,54 @@ export function WorkoutDetail({ workoutId }: { workoutId: string }) {
         {confirmingDelete ? (
           <span className="flex items-center gap-2 text-sm">
             削除しますか？
-            <button
+            <Button
               type="button"
+              variant="destructive"
+              size="sm"
               onClick={async () => {
                 await deleteWorkout.mutateAsync(workoutId).catch(() => {})
                 if (!deleteWorkout.isError) navigate({ to: '/' })
               }}
-              className="rounded-md bg-red-600 px-3 py-1 text-white"
             >
               はい
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
               onClick={() => setConfirmingDelete(false)}
-              className="rounded-md border border-slate-300 px-3 py-1 dark:border-slate-700"
             >
               いいえ
-            </button>
+            </Button>
           </span>
         ) : (
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="sm"
+            className="text-destructive"
             onClick={() => setConfirmingDelete(true)}
-            className="text-red-600 text-sm underline underline-offset-2"
           >
             セッションを削除
-          </button>
+          </Button>
         )}
       </header>
 
       {deleteWorkout.error && (
-        <p role="alert" className="text-red-600 text-sm">
+        <p role="alert" className="text-destructive text-sm">
           {deleteWorkout.error.message}
         </p>
       )}
 
       <div className="flex flex-col gap-1">
-        <label htmlFor="exercise" className="text-slate-500 text-xs">
+        <Label htmlFor="exercise" className="text-muted-foreground text-xs">
           種目
-        </label>
+        </Label>
         <select
           id="exercise"
           value={exerciseId}
           onChange={(e) => setExerciseId(e.target.value)}
-          className="rounded-md border border-slate-300 px-2 py-2 text-base dark:border-slate-700 dark:bg-slate-900"
+          className="rounded-lg border border-input bg-transparent px-2.5 py-2 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
         >
           <option value="">選択してください</option>
           {exercises.data?.map((e) => (
@@ -143,15 +149,17 @@ export function WorkoutDetail({ workoutId }: { workoutId: string }) {
       )}
 
       {mutationError && (
-        <p role="alert" className="text-red-600 text-sm">
+        <p role="alert" className="text-destructive text-sm">
           {mutationError.message}
         </p>
       )}
 
       <section>
-        <h2 className="mb-2 font-medium text-slate-500 text-xs">今日の記録</h2>
+        <h2 className="mb-2 font-medium text-muted-foreground text-xs">
+          今日の記録
+        </h2>
         {groups.length === 0 ? (
-          <p className="text-slate-400 text-sm">まだ記録がありません</p>
+          <p className="text-muted-foreground text-sm">まだ記録がありません</p>
         ) : (
           <div className="flex flex-col gap-3">
             {groups.map((g) => (

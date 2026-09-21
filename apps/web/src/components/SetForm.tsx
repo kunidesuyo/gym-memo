@@ -1,5 +1,10 @@
 import { useForm } from '@tanstack/react-form'
 import { setFormSchema } from 'api/schema/set'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+
+export type SetFormValues = { weightKg: string; reps: string; note: string }
 
 /**
  * セット入力フォーム。
@@ -7,8 +12,6 @@ import { setFormSchema } from 'api/schema/set'
  * 検証には apps/api の Zod スキーマをそのまま渡している（Standard Schema 対応）。
  * サーバーと同じルールなので「クライアントは通るのにサーバーで 400」が起きない。
  */
-export type SetFormValues = { weightKg: string; reps: string; note: string }
-
 export function SetForm({
   onSubmit,
   isPending,
@@ -54,65 +57,52 @@ export function SetForm({
     >
       <form.Field name="weightKg">
         {(field) => (
-          <NumberField
+          <TextField
             label="重量 (kg)"
             field={field}
             inputMode="decimal"
             placeholder="60"
+            className="w-24 tabular-nums"
           />
         )}
       </form.Field>
 
       <form.Field name="reps">
         {(field) => (
-          <NumberField
+          <TextField
             label="回数"
             field={field}
             inputMode="numeric"
             placeholder="10"
+            className="w-20 tabular-nums"
           />
         )}
       </form.Field>
 
       <form.Field name="note">
         {(field) => (
-          <div className="flex min-w-40 flex-1 flex-col">
-            <label htmlFor={field.name} className="mb-1 text-slate-500 text-xs">
-              メモ（任意）
-            </label>
-            <input
-              id={field.name}
-              name={field.name}
-              placeholder="シート3段目 / 最後きつい"
-              value={field.state.value}
-              onBlur={field.handleBlur}
-              onChange={(e) => field.handleChange(e.target.value)}
-              className="rounded-md border border-slate-300 px-2 py-2 text-base dark:border-slate-700 dark:bg-slate-900"
-            />
-          </div>
+          <TextField
+            label="メモ（任意）"
+            field={field}
+            placeholder="シート3段目 / 最後きつい"
+            className="min-w-40 flex-1"
+            wrapperClassName="min-w-40 flex-1"
+          />
         )}
       </form.Field>
 
       <div className="mt-5 flex gap-2">
         <form.Subscribe selector={(s) => s.isSubmitting}>
           {(isSubmitting) => (
-            <button
-              type="submit"
-              disabled={isSubmitting || isPending}
-              className="rounded-md bg-slate-900 px-4 py-2 font-medium text-sm text-white disabled:opacity-40 dark:bg-slate-100 dark:text-slate-900"
-            >
+            <Button type="submit" disabled={isSubmitting || isPending}>
               {submitLabel}
-            </button>
+            </Button>
           )}
         </form.Subscribe>
         {onCancel && (
-          <button
-            type="button"
-            onClick={onCancel}
-            className="rounded-md border border-slate-300 px-4 py-2 text-sm dark:border-slate-700"
-          >
+          <Button type="button" variant="outline" onClick={onCancel}>
             キャンセル
-          </button>
+          </Button>
         )}
       </div>
     </form>
@@ -131,16 +121,20 @@ type FieldLike = {
   handleChange(value: string): void
 }
 
-function NumberField({
+function TextField({
   label,
   field,
   inputMode,
   placeholder,
+  className,
+  wrapperClassName,
 }: {
   label: string
   field: FieldLike
-  inputMode: 'decimal' | 'numeric'
+  inputMode?: 'decimal' | 'numeric'
   placeholder: string
+  className?: string
+  wrapperClassName?: string
 }) {
   const errors: string[] = field.state.meta.errors
     .map((e) =>
@@ -148,12 +142,15 @@ function NumberField({
     )
     .filter(Boolean)
 
+  const errorId = `${field.name}-error`
+  const hasError = errors.length > 0
+
   return (
-    <div className="flex flex-col">
-      <label htmlFor={field.name} className="mb-1 text-slate-500 text-xs">
+    <div className={`flex flex-col gap-1 ${wrapperClassName ?? ''}`}>
+      <Label htmlFor={field.name} className="text-muted-foreground text-xs">
         {label}
-      </label>
-      <input
+      </Label>
+      <Input
         id={field.name}
         name={field.name}
         inputMode={inputMode}
@@ -161,11 +158,14 @@ function NumberField({
         value={field.state.value}
         onBlur={field.handleBlur}
         onChange={(e) => field.handleChange(e.target.value)}
-        aria-invalid={errors.length > 0}
-        className="w-24 rounded-md border border-slate-300 px-2 py-2 text-base tabular-nums dark:border-slate-700 dark:bg-slate-900"
+        aria-invalid={hasError}
+        // エラー文言を入力欄に紐付ける。これが無いとスクリーンリーダーが
+        // 入力欄にフォーカスしたときエラー内容を読み上げない。
+        aria-describedby={hasError ? errorId : undefined}
+        className={className}
       />
-      {errors.length > 0 && (
-        <p role="alert" className="mt-1 max-w-24 text-red-600 text-xs">
+      {hasError && (
+        <p id={errorId} role="alert" className="text-destructive text-xs">
           {errors[0]}
         </p>
       )}

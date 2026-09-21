@@ -5,6 +5,17 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import { routeTree } from './routeTree.gen'
 
+/**
+ * shadcn は `.dark` クラスでテーマを切り替える（index.css の @custom-variant dark）。
+ * Tailwind 既定の `dark:` と違い prefers-color-scheme を自動では見ないので、
+ * OS 設定に追従するようここで同期する。
+ */
+const darkMedia = window.matchMedia('(prefers-color-scheme: dark)')
+const syncTheme = () =>
+  document.documentElement.classList.toggle('dark', darkMedia.matches)
+syncTheme()
+darkMedia.addEventListener('change', syncTheme)
+
 const queryClient = new QueryClient()
 const router = createRouter({ routeTree })
 
