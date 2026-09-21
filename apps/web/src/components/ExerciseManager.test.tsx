@@ -1,10 +1,18 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { HttpResponse, http } from 'msw'
 import { describe, expect, it } from 'vitest'
-import { server } from '../../test/msw/server'
 import { renderWithRouter } from '../../test/utils'
 import { ExerciseManager } from './ExerciseManager'
+
+/**
+ * 一覧に見えている種目名。リンクは <span>部位</span><span>名前</span> の形なので末尾を読む。
+ * 絞り込み後は0件もありうるので、特定の名前を待たない作りにしてある。
+ */
+function visibleNames() {
+  return screen
+    .queryAllByRole('link')
+    .map((a) => a.querySelector('span:last-child')?.textContent ?? '')
+}
 
 describe('ExerciseManager', () => {
   it('PPL ごとに種目をまとめて表示する', async () => {
@@ -19,78 +27,131 @@ describe('ExerciseManager', () => {
     expect(within(legs).getByText('スクワット')).toBeInTheDocument()
   })
 
-  it('部位を選ぶと分割(PPL)が自動で埋まる', async () => {
-    const user = userEvent.setup()
+  it('編集・削除ボタンを一覧には置かない（詳細画面に集約）', async () => {
     renderWithRouter(<ExerciseManager />)
+    await screen.findByText('ベンチプレス')
 
-    await user.click(await screen.findByRole('button', { name: '追加' }))
-
-    // 既定は 胸 / Push
-    expect(screen.getByLabelText('分割')).toHaveValue('push')
-
-    await user.selectOptions(screen.getByLabelText('部位'), 'back')
-    expect(screen.getByLabelText('分割')).toHaveValue('pull')
-
-    await user.selectOptions(screen.getByLabelText('部位'), 'quads')
-    expect(screen.getByLabelText('分割')).toHaveValue('legs')
+    expect(screen.queryByRole('button', { name: '編集' })).toBeNull()
+    expect(screen.queryByRole('button', { name: '削除' })).toBeNull()
   })
 
-  it('自動で入った分割は手で変更できる', async () => {
-    const user = userEvent.setup()
-    renderWithRouter(<ExerciseManager />)
+  describe('絞り込み', () => {
+    it('分割(PPL)のチェックで即座に絞り込む', async () => {
+      const user = userEvent.setup()
+      renderWithRouter(<ExerciseManager />)
+      await screen.findByText('ベンチプレス')
 
-    await user.click(await screen.findByRole('button', { name: '追加' }))
-    await user.selectOptions(screen.getByLabelText('部位'), 'abs')
-    expect(screen.getByLabelText('分割')).toHaveValue('legs')
+      await user.click(screen.getByRole('checkbox', { name: 'Pull' }))
 
-    await user.selectOptions(screen.getByLabelText('分割'), 'push')
-    expect(screen.getByLabelText('分割')).toHaveValue('push')
+      expect(visibleNames()).toEqual(['ラットプルダウン'])
+    })
+
+    it('部位のチェックで絞り込む', async () => {
+      const user = userEvent.setup()
+      renderWithRouter(<ExerciseManager />)
+      await screen.findByText('ベンチプレス')
+
+      await user.click(screen.getByRole('checkbox', { name: '肩' }))
+
+      expect(visibleNames()).toEqual(['サイドレイズ'])
+    })
+
+    it('同じ軸の複数チェックは OR', async () => {
+      const user = userEvent.setup()
+      renderWithRouter(<ExerciseManager />)
+      await screen.findByText('ベンチプレス')
+
+      await user.click(screen.getByRole('checkbox', { name: '胸' }))
+      await user.click(screen.getByRole('checkbox', { name: '肩' }))
+
+      const names = visibleNames()
+      expect(names).toHaveLength(2)
+      expect(names).toContain('ベンチプレス')
+      expect(names).toContain('サイドレイズ')
+    })
+
+    it('軸をまたぐと AND（Push かつ 背中 は0件）', async () => {
+      const user = userEvent.setup()
+      renderWithRouter(<ExerciseManager />)
+      await screen.findByText('ベンチプレス')
+
+      await user.click(screen.getByRole('checkbox', { name: 'Push' }))
+      await user.click(screen.getByRole('checkbox', { name: '背中' }))
+
+      expect(
+        await screen.findByText('条件に合う種目がありません'),
+      ).toBeInTheDocument()
+    })
+
+    it('クリアボタンで全件に戻る（常に表示されている）', async () => {
+      const user = userEvent.setup()
+      renderWithRouter(<ExerciseManager />)
+      await screen.findByText('ベンチプレス')
+
+      // 何も選んでいない状態でも表示されている
+      expect(screen.getByRole('button', { name: 'クリア' })).toBeInTheDocument()
+
+      await user.click(screen.getByRole('checkbox', { name: 'Pull' }))
+      expect(visibleNames()).toEqual(['ラットプルダウン'])
+
+      await user.click(screen.getByRole('button', { name: 'クリア' }))
+      expect(visibleNames()).toHaveLength(4)
+    })
   })
 
-  it('種目名が空なら追加できない', async () => {
-    const user = userEvent.setup()
-    renderWithRouter(<ExerciseManager />)
+  describe('追加（モーダル）', () => {
+    it('「追加」を押すまでフォームは出ない', async () => {
+      const user = userEvent.setup()
+      renderWithRouter(<ExerciseManager />)
+      await screen.findByText('ベンチプレス')
 
-    await user.click(await screen.findByRole('button', { name: '追加' }))
-    await user.click(screen.getByRole('button', { name: '追加する' }))
+      expect(screen.queryByLabelText('種目名')).toBeNull()
 
-    expect(
-      await screen.findByText('種目名を入力してください'),
-    ).toBeInTheDocument()
-  })
+      await user.click(screen.getByRole('button', { name: '追加' }))
+      expect(await screen.findByRole('dialog')).toBeInTheDocument()
+      expect(screen.getByLabelText('種目名')).toBeInTheDocument()
+    })
 
-  it('追加に成功するとフォームが閉じる', async () => {
-    const user = userEvent.setup()
-    renderWithRouter(<ExerciseManager />)
+    it('部位を選ぶと分割(PPL)が自動で埋まり、手で変更もできる', async () => {
+      const user = userEvent.setup()
+      renderWithRouter(<ExerciseManager />)
+      await screen.findByText('ベンチプレス')
+      await user.click(screen.getByRole('button', { name: '追加' }))
+      await screen.findByRole('dialog')
 
-    await user.click(await screen.findByRole('button', { name: '追加' }))
-    await user.type(screen.getByLabelText('種目名'), 'サイドレイズ')
-    await user.click(screen.getByRole('button', { name: '追加する' }))
+      expect(screen.getByLabelText('分割')).toHaveValue('push')
 
-    await waitFor(() =>
-      expect(screen.queryByRole('button', { name: '追加する' })).toBeNull(),
-    )
-  })
+      await user.selectOptions(screen.getByLabelText('部位'), 'back')
+      expect(screen.getByLabelText('分割')).toHaveValue('pull')
 
-  it('使用中の種目を削除するとサーバーの理由を表示する', async () => {
-    server.use(
-      http.delete('/api/exercises/:id', () =>
-        HttpResponse.json(
-          { error: 'この種目は3件の記録で使われています', usedBy: 3 },
-          { status: 409 },
-        ),
-      ),
-    )
+      await user.selectOptions(screen.getByLabelText('分割'), 'legs')
+      expect(screen.getByLabelText('分割')).toHaveValue('legs')
+    })
 
-    const user = userEvent.setup()
-    renderWithRouter(<ExerciseManager />)
+    it('種目名が空なら追加できない', async () => {
+      const user = userEvent.setup()
+      renderWithRouter(<ExerciseManager />)
+      await screen.findByText('ベンチプレス')
+      await user.click(screen.getByRole('button', { name: '追加' }))
+      await screen.findByRole('dialog')
 
-    const row = (await screen.findByText('ベンチプレス')).closest('li')
-    if (!row) throw new Error('行が見つかりません')
-    await user.click(within(row).getByRole('button', { name: '削除' }))
+      await user.click(screen.getByRole('button', { name: '追加する' }))
+      expect(
+        await screen.findByText('種目名を入力してください'),
+      ).toBeInTheDocument()
+    })
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'この種目は3件の記録で使われています',
-    )
+    it('追加に成功するとモーダルが閉じる', async () => {
+      const user = userEvent.setup()
+      renderWithRouter(<ExerciseManager />)
+      await screen.findByText('ベンチプレス')
+      await user.click(screen.getByRole('button', { name: '追加' }))
+      await screen.findByRole('dialog')
+
+      await user.type(screen.getByLabelText('種目名'), 'ディップス')
+      await user.click(screen.getByRole('button', { name: '追加する' }))
+
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    })
   })
 })

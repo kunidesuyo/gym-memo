@@ -31,6 +31,20 @@ export const exercisesFixture: Exercise[] = [
     muscleGroup: 'quads',
     createdAt: '2026-09-01',
   },
+  {
+    id: '01a0bf17-b376-7779-828a-000000000003',
+    name: 'ラットプルダウン',
+    category: 'pull',
+    muscleGroup: 'back',
+    createdAt: '2026-09-01',
+  },
+  {
+    id: '01a0bf17-b376-7779-828a-000000000004',
+    name: 'サイドレイズ',
+    category: 'push',
+    muscleGroup: 'shoulders',
+    createdAt: '2026-09-01',
+  },
 ]
 
 export const workoutFixture: Workout = {
@@ -149,7 +163,7 @@ export const handlers = [
     const body = (await request.json()) as { performedOn: string }
     return HttpResponse.json(
       {
-        id: 11,
+        id: '01a0bf21-0000-7000-8000-000000000011',
         performedOn: body.performedOn,
         createdAt: '2026-09-20 10:00:00',
       },

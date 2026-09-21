@@ -191,4 +191,27 @@ describe('WorkoutDetail', () => {
     await user.click(screen.getByRole('button', { name: 'はい' }))
     await waitFor(() => expect(deleted).toBe(true))
   })
+
+  it('セッション削除に失敗したら遷移せず理由を出す', async () => {
+    server.use(
+      http.delete('/api/workouts/:id', () =>
+        HttpResponse.json({ error: 'boom' }, { status: 500 }),
+      ),
+    )
+
+    const user = userEvent.setup()
+    renderWithRouter(<WorkoutDetail workoutId={WORKOUT_ID} />)
+
+    await user.click(
+      await screen.findByRole('button', { name: 'セッションを削除' }),
+    )
+    await user.click(screen.getByRole('button', { name: 'はい' }))
+
+    // サーバーが理由を返していればそれを優先して見せる
+    expect(await screen.findByRole('alert')).toHaveTextContent('boom')
+    // 画面に留まっている
+    expect(
+      screen.getByRole('heading', { name: '今日の記録' }),
+    ).toBeInTheDocument()
+  })
 })

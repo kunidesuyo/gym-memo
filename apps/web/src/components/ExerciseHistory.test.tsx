@@ -1,4 +1,5 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { HttpResponse, http } from 'msw'
 import { describe, expect, it } from 'vitest'
 import { BENCH_ID, historyFixture, WORKOUT_ID } from '../../test/msw/handlers'
@@ -52,5 +53,79 @@ describe('ExerciseHistory', () => {
 
     renderWithRouter(<ExerciseHistory exerciseId={BENCH_ID} />)
     expect(await screen.findByText('まだ記録がありません')).toBeInTheDocument()
+  })
+
+  describe('この種目自体の編集・削除（一覧ではなくここに集約）', () => {
+    it('編集モーダルに現在の値が入っている', async () => {
+      const user = userEvent.setup()
+      renderWithRouter(<ExerciseHistory exerciseId={BENCH_ID} />)
+
+      await user.click(await screen.findByRole('button', { name: '編集' }))
+
+      expect(await screen.findByRole('dialog')).toBeInTheDocument()
+      expect(screen.getByLabelText('種目名')).toHaveValue('ベンチプレス')
+      expect(screen.getByLabelText('分割')).toHaveValue('push')
+      expect(screen.getByLabelText('部位')).toHaveValue('chest')
+    })
+
+    it('更新に成功するとモーダルが閉じる', async () => {
+      const user = userEvent.setup()
+      renderWithRouter(<ExerciseHistory exerciseId={BENCH_ID} />)
+
+      await user.click(await screen.findByRole('button', { name: '編集' }))
+      await screen.findByRole('dialog')
+
+      const name = screen.getByLabelText('種目名')
+      await user.clear(name)
+      await user.type(name, 'ダンベルベンチプレス')
+      await user.click(screen.getByRole('button', { name: '更新する' }))
+
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    })
+
+    it('削除は確認してから実行する', async () => {
+      let deleted = false
+      server.use(
+        http.delete('/api/exercises/:id', () => {
+          deleted = true
+          return new HttpResponse(null, { status: 204 })
+        }),
+      )
+
+      const user = userEvent.setup()
+      renderWithRouter(<ExerciseHistory exerciseId={BENCH_ID} />)
+
+      await user.click(await screen.findByRole('button', { name: '削除' }))
+      expect(deleted).toBe(false)
+      expect(screen.getByText('削除しますか？')).toBeInTheDocument()
+
+      await user.click(screen.getByRole('button', { name: 'いいえ' }))
+      expect(deleted).toBe(false)
+
+      await user.click(screen.getByRole('button', { name: '削除' }))
+      await user.click(screen.getByRole('button', { name: 'はい' }))
+      await waitFor(() => expect(deleted).toBe(true))
+    })
+
+    it('記録で使われている種目はサーバーの理由を表示する', async () => {
+      server.use(
+        http.delete('/api/exercises/:id', () =>
+          HttpResponse.json(
+            { error: 'この種目は3件の記録で使われています', usedBy: 3 },
+            { status: 409 },
+          ),
+        ),
+      )
+
+      const user = userEvent.setup()
+      renderWithRouter(<ExerciseHistory exerciseId={BENCH_ID} />)
+
+      await user.click(await screen.findByRole('button', { name: '削除' }))
+      await user.click(screen.getByRole('button', { name: 'はい' }))
+
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        'この種目は3件の記録で使われています',
+      )
+    })
   })
 })

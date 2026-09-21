@@ -40,6 +40,11 @@ export function renderWithRouter(ui: ReactElement) {
     path: '/workouts/$workoutId',
     component: () => <div>ワークアウト画面</div>,
   })
+  const exerciseListRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/exercises',
+    component: () => <div>種目一覧</div>,
+  })
   const exerciseRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/exercises/$exerciseId',
@@ -47,7 +52,12 @@ export function renderWithRouter(ui: ReactElement) {
   })
 
   const router = createRouter({
-    routeTree: rootRoute.addChildren([indexRoute, workoutRoute, exerciseRoute]),
+    routeTree: rootRoute.addChildren([
+      indexRoute,
+      workoutRoute,
+      exerciseListRoute,
+      exerciseRoute,
+    ]),
     history: createMemoryHistory({ initialEntries: ['/'] }),
   })
 

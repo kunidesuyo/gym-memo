@@ -1,6 +1,5 @@
 import { Link } from '@tanstack/react-router'
 import {
-  type Category,
   categories,
   categoryLabels,
   type MuscleGroup,
@@ -9,84 +8,70 @@ import {
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
-  type Exercise,
-  useCreateExercise,
-  useDeleteExercise,
-  useExercises,
-  useUpdateExercise,
-} from '../api/hooks'
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { useCreateExercise, useExercises } from '../api/hooks'
+import {
+  applyFilter,
+  type ExerciseFilter,
+  ExerciseFilters,
+  emptyFilter,
+} from './ExerciseFilters'
 import { ExerciseForm } from './ExerciseForm'
 
-type Editing = { mode: 'new' } | { mode: 'edit'; exercise: Exercise } | null
-
+/**
+ * 種目一覧。
+ *
+ * 編集・削除はここには置かず、詳細画面（/exercises/$id）に集約している。
+ * 一覧は「探す」ための画面という役割分担。
+ */
 export function ExerciseManager() {
-  const [editing, setEditing] = useState<Editing>(null)
+  const [filter, setFilter] = useState<ExerciseFilter>(emptyFilter)
+  const [adding, setAdding] = useState(false)
 
   const exercises = useExercises()
   const create = useCreateExercise()
-  const update = useUpdateExercise()
-  const remove = useDeleteExercise()
 
-  const byCategory = (c: Category) =>
-    exercises.data?.filter((e) => e.category === c) ?? []
+  // 種目は十数件なのでサーバーに問い合わせず手元で絞る。
+  // チェックした瞬間に反映され、ローディングも走らない。
+  const visible = applyFilter(exercises.data ?? [], filter)
 
   return (
     <div className="flex flex-col gap-4">
       <header className="flex items-center justify-between">
         <h1 className="font-bold text-xl">種目</h1>
-        {editing === null && (
-          <Button
-            type="button"
-            size="sm"
-            onClick={() => {
-              create.reset()
-              setEditing({ mode: 'new' })
-            }}
-          >
-            追加
-          </Button>
-        )}
+        <Button
+          type="button"
+          size="sm"
+          onClick={() => {
+            create.reset()
+            setAdding(true)
+          }}
+        >
+          追加
+        </Button>
       </header>
 
-      {editing?.mode === 'new' && (
-        <ExerciseForm
-          submitLabel="追加する"
-          error={create.error}
-          onCancel={() => setEditing(null)}
-          onSubmit={async (values) => {
-            await create.mutateAsync(values)
-            setEditing(null)
-          }}
-        />
-      )}
+      <ExerciseFilters value={filter} onChange={setFilter} />
 
-      {editing?.mode === 'edit' && (
-        <ExerciseForm
-          initial={{
-            name: editing.exercise.name,
-            category: editing.exercise.category,
-            muscleGroup: editing.exercise.muscleGroup as MuscleGroup,
-          }}
-          submitLabel="更新する"
-          error={update.error}
-          onCancel={() => setEditing(null)}
-          onSubmit={async (values) => {
-            await update.mutateAsync({ id: editing.exercise.id, ...values })
-            setEditing(null)
-          }}
-        />
-      )}
-
-      {remove.error && (
-        <p role="alert" className="text-destructive text-sm">
-          {remove.error.message}
+      {exercises.isPending && <p>読み込み中...</p>}
+      {exercises.error && (
+        <p role="alert" className="text-destructive">
+          {exercises.error.message}
         </p>
       )}
 
-      {exercises.isPending && <p>読み込み中...</p>}
+      {!exercises.isPending && visible.length === 0 && (
+        <p className="text-muted-foreground text-sm">
+          条件に合う種目がありません
+        </p>
+      )}
 
       {categories.map((c) => {
-        const rows = byCategory(c)
+        const rows = visible.filter((e) => e.category === c)
         if (rows.length === 0) return null
         return (
           <section key={c}>
@@ -95,48 +80,40 @@ export function ExerciseManager() {
             </h2>
             <ul className="divide-y divide-border">
               {rows.map((e) => (
-                <li key={e.id} className="flex items-center gap-2 py-2">
-                  <span className="w-16 shrink-0 text-muted-foreground text-xs">
-                    {muscleGroupLabels[e.muscleGroup as MuscleGroup]}
-                  </span>
+                <li key={e.id}>
                   <Link
                     to="/exercises/$exerciseId"
                     params={{ exerciseId: e.id }}
-                    className="flex-1 underline-offset-2 hover:underline"
+                    className="flex items-center gap-2 py-2.5"
                   >
-                    {e.name}
+                    <span className="w-16 shrink-0 text-muted-foreground text-xs">
+                      {muscleGroupLabels[e.muscleGroup as MuscleGroup]}
+                    </span>
+                    <span className="flex-1">{e.name}</span>
                   </Link>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="xs"
-                    onClick={() => {
-                      update.reset()
-                      remove.reset()
-                      setEditing({ mode: 'edit', exercise: e })
-                    }}
-                  >
-                    編集
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="xs"
-                    className="text-destructive"
-                    onClick={() => {
-                      remove.reset()
-                      // 使用中なら API が 409 を返し、その文言を上に表示する
-                      remove.mutate(e.id)
-                    }}
-                  >
-                    削除
-                  </Button>
                 </li>
               ))}
             </ul>
           </section>
         )
       })}
+
+      <Dialog open={adding} onOpenChange={setAdding}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>種目を追加</DialogTitle>
+          </DialogHeader>
+          <ExerciseForm
+            submitLabel="追加する"
+            error={create.error}
+            onCancel={() => setAdding(false)}
+            onSubmit={async (values) => {
+              await create.mutateAsync(values)
+              setAdding(false)
+            }}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

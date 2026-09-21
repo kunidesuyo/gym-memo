@@ -50,7 +50,7 @@ export function ExerciseForm({
         e.preventDefault()
         form.handleSubmit()
       }}
-      className="flex flex-col gap-3 rounded-lg border p-3"
+      className="flex flex-col gap-3"
     >
       <form.Field name="name">
         {(field) => {

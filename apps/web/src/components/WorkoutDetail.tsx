@@ -73,8 +73,14 @@ export function WorkoutDetail({ workoutId }: { workoutId: string }) {
               variant="destructive"
               size="sm"
               onClick={async () => {
-                await deleteWorkout.mutateAsync(workoutId).catch(() => {})
-                if (!deleteWorkout.isError) navigate({ to: '/' })
+                try {
+                  await deleteWorkout.mutateAsync(workoutId)
+                  navigate({ to: '/' })
+                } catch {
+                  // 理由は deleteWorkout.error として上に表示する。
+                  // isError をここで見ないこと。クロージャが古い値を掴んでいて
+                  // 失敗しても遷移してしまう。
+                }
               }}
             >
               はい
