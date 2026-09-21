@@ -45,6 +45,7 @@ describe('SetForm', () => {
       weightKg: 62.5,
       reps: 8,
       note: '',
+      failed: false,
     })
   })
 
@@ -62,6 +63,7 @@ describe('SetForm', () => {
       weightKg: 60,
       reps: 10,
       note: 'シート3段目',
+      failed: false,
     })
   })
 
@@ -84,7 +86,7 @@ describe('SetForm', () => {
     const onSubmit = vi.fn().mockResolvedValue(undefined)
     render(
       <SetForm
-        initial={{ weightKg: '60', reps: '10', note: 'メモ' }}
+        initial={{ weightKg: '60', reps: '10', note: 'メモ', failed: false }}
         submitLabel="更新する"
         onCancel={() => {}}
         onSubmit={onSubmit}
@@ -101,8 +103,59 @@ describe('SetForm', () => {
       weightKg: 60,
       reps: 10,
       note: 'メモ',
+      failed: false,
     })
     // 編集フォームなので値は残る
     expect(screen.getByLabelText('回数')).toHaveValue('10')
+  })
+
+  it('「失敗」にチェックすると回数0でも送信できる', async () => {
+    const user = userEvent.setup()
+    const onSubmit = vi.fn().mockResolvedValue(undefined)
+    render(<SetForm onSubmit={onSubmit} isPending={false} />)
+
+    await user.type(screen.getByLabelText('重量 (kg)'), '85')
+    await user.type(screen.getByLabelText('回数'), '0')
+    await user.click(screen.getByRole('checkbox', { name: '失敗' }))
+    await user.click(screen.getByRole('button', { name: '記録する' }))
+
+    expect(onSubmit).toHaveBeenCalledWith({
+      weightKg: 85,
+      reps: 0,
+      note: '',
+      failed: true,
+    })
+  })
+
+  it('失敗チェック無しで回数0なら弾く', async () => {
+    const user = userEvent.setup()
+    const onSubmit = vi.fn()
+    render(<SetForm onSubmit={onSubmit} isPending={false} />)
+
+    await user.type(screen.getByLabelText('重量 (kg)'), '85')
+    await user.type(screen.getByLabelText('回数'), '0')
+    await user.click(screen.getByRole('button', { name: '記録する' }))
+
+    expect(
+      await screen.findByText('成功したセットは回数を1以上にしてください'),
+    ).toBeInTheDocument()
+    expect(onSubmit).not.toHaveBeenCalled()
+  })
+
+  it('負の重量（懸垂の補助）を入力できる', async () => {
+    const user = userEvent.setup()
+    const onSubmit = vi.fn().mockResolvedValue(undefined)
+    render(<SetForm onSubmit={onSubmit} isPending={false} />)
+
+    await user.type(screen.getByLabelText('重量 (kg)'), '-18')
+    await user.type(screen.getByLabelText('回数'), '10')
+    await user.click(screen.getByRole('button', { name: '記録する' }))
+
+    expect(onSubmit).toHaveBeenCalledWith({
+      weightKg: -18,
+      reps: 10,
+      note: '',
+      failed: false,
+    })
   })
 })

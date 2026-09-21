@@ -67,6 +67,7 @@ export const workoutWithSetsFixture: Workout = {
       setOrder: 1,
       weightKg: 60,
       reps: 10,
+      failed: false,
       note: null,
     },
     {
@@ -76,6 +77,7 @@ export const workoutWithSetsFixture: Workout = {
       setOrder: 2,
       weightKg: 65,
       reps: 8,
+      failed: false,
       note: null,
     },
   ],
@@ -93,14 +95,37 @@ export const historyFixture: ExerciseHistory = {
     {
       workoutId: WORKOUT_ID,
       performedOn: '2026-09-20',
-      sets: [{ id: 'h1', setOrder: 1, weightKg: 70, reps: 6, note: null }],
+      sets: [
+        {
+          id: 'h1',
+          setOrder: 1,
+          weightKg: 70,
+          reps: 6,
+          failed: false,
+          note: null,
+        },
+      ],
     },
     {
       workoutId: '01a0bf19-0000-7000-8000-000000000009',
       performedOn: '2026-09-13',
       sets: [
-        { id: 'h2', setOrder: 1, weightKg: 60, reps: 10, note: 'シート3段目' },
-        { id: 'h3', setOrder: 2, weightKg: 65, reps: 8, note: null },
+        {
+          id: 'h2',
+          setOrder: 1,
+          weightKg: 60,
+          reps: 10,
+          failed: false,
+          note: 'シート3段目',
+        },
+        {
+          id: 'h3',
+          setOrder: 2,
+          weightKg: 65,
+          reps: 8,
+          failed: false,
+          note: null,
+        },
       ],
     },
   ],
@@ -110,8 +135,22 @@ export const lastSetsFixture: LastSetsResult = {
   workoutId: '01a0bf19-0000-7000-8000-000000000009',
   performedOn: '2026-09-13',
   sets: [
-    { id: 's1', setOrder: 1, weightKg: 60, reps: 10, note: null },
-    { id: 's2', setOrder: 2, weightKg: 65, reps: 8, note: 'ウォームアップ' },
+    {
+      id: 's1',
+      setOrder: 1,
+      weightKg: 60,
+      reps: 10,
+      failed: false,
+      note: null,
+    },
+    {
+      id: 's2',
+      setOrder: 2,
+      weightKg: 65,
+      reps: 8,
+      failed: false,
+      note: 'ウォームアップ',
+    },
   ],
 }
 
@@ -194,6 +233,7 @@ export const handlers = [
       exerciseId: BENCH_ID,
       setOrder: 1,
       createdAt: '2026-09-20 10:00:00',
+      failed: false,
       ...body,
       note: body.note ?? null,
     })
@@ -221,6 +261,7 @@ export const handlers = [
         setOrder: 1,
         weightKg: body.weightKg,
         reps: body.reps,
+        failed: false,
         note: null,
         createdAt: '2026-09-20 10:00:00',
       },

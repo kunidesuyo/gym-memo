@@ -79,6 +79,7 @@ export async function getWorkout(db: Db, id: string) {
       setOrder: sets.setOrder,
       weightKg: sets.weightKg,
       reps: sets.reps,
+      failed: sets.failed,
       note: sets.note,
     })
     .from(sets)
@@ -100,6 +101,7 @@ export async function addSet(
     exerciseId: string
     weightKg: number
     reps: number
+    failed?: boolean
     note?: string | null
   },
 ) {
@@ -118,6 +120,7 @@ export async function addSet(
       setOrder: (agg?.maxOrder ?? 0) + 1,
       weightKg: input.weightKg,
       reps: input.reps,
+      failed: input.failed ?? false,
       note: input.note ?? null,
     })
     .returning()
@@ -161,6 +164,7 @@ export async function getLastSets(
       setOrder: sets.setOrder,
       weightKg: sets.weightKg,
       reps: sets.reps,
+      failed: sets.failed,
       note: sets.note,
     })
     .from(sets)
@@ -180,13 +184,19 @@ export async function getSet(db: Db, id: string) {
 export async function updateSet(
   db: Db,
   id: string,
-  input: { weightKg: number; reps: number; note?: string | null },
+  input: {
+    weightKg: number
+    reps: number
+    failed?: boolean
+    note?: string | null
+  },
 ) {
   const [row] = await db
     .update(sets)
     .set({
       weightKg: input.weightKg,
       reps: input.reps,
+      failed: input.failed ?? false,
       note: input.note ?? null,
     })
     .where(eq(sets.id, id))
@@ -260,6 +270,7 @@ export async function getExerciseHistory(
       setOrder: sets.setOrder,
       weightKg: sets.weightKg,
       reps: sets.reps,
+      failed: sets.failed,
       note: sets.note,
     })
     .from(sets)

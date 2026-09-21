@@ -37,8 +37,14 @@ export function LastSets({
                     {s.setOrder}.
                   </span>
                   <span className="font-medium">{s.weightKg}kg</span>
-                  <span className="text-muted-foreground">×</span>
-                  <span>{s.reps}回</span>
+                  {s.failed ? (
+                    <span className="font-medium text-destructive">失敗</span>
+                  ) : (
+                    <>
+                      <span className="text-muted-foreground">×</span>
+                      <span>{s.reps}回</span>
+                    </>
+                  )}
                 </li>
               ))}
             </ul>

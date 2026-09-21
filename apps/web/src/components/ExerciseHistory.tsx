@@ -142,8 +142,14 @@ export function ExerciseHistory({ exerciseId }: { exerciseId: string }) {
                       {set.setOrder}.
                     </span>
                     <span className="font-medium">{set.weightKg}kg</span>
-                    <span className="text-muted-foreground">×</span>
-                    <span>{set.reps}回</span>
+                    {set.failed ? (
+                      <span className="font-medium text-destructive">失敗</span>
+                    ) : (
+                      <>
+                        <span className="text-muted-foreground">×</span>
+                        <span>{set.reps}回</span>
+                      </>
+                    )}
                     {set.note && (
                       <span className="truncate text-muted-foreground text-xs">
                         {set.note}

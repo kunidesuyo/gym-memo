@@ -238,4 +238,30 @@ describe('WorkoutDetail', () => {
       weightInputs.map((i) => (i as HTMLInputElement).value).sort(),
     ).toEqual(['', '60'])
   })
+
+  it('失敗したセットは回数ではなく「失敗」と表示する', async () => {
+    server.use(
+      http.get('/api/workouts/:id', () =>
+        HttpResponse.json({
+          ...workoutWithSetsFixture,
+          sets: [
+            {
+              ...workoutWithSetsFixture.sets[0],
+              id: 'failed-set',
+              weightKg: 85,
+              reps: 0,
+              failed: true,
+            },
+          ],
+        }),
+      ),
+    )
+
+    renderWithRouter(<WorkoutDetail workoutId={WORKOUT_ID} />)
+
+    const today = await todaySection()
+    expect(await today.findByText('85kg')).toBeInTheDocument()
+    expect(today.getByText('失敗')).toBeInTheDocument()
+    expect(today.queryByText('0回')).toBeNull()
+  })
 })

@@ -64,13 +64,25 @@ describe('PATCH /api/sets/:id', () => {
     })
   })
 
-  it('不正な値は 400', async () => {
+  it('範囲外の値は 400', async () => {
     const { a } = await threeSets()
     const res = await send('PATCH', `/api/sets/${a.id}`, {
-      weightKg: -1,
+      weightKg: 2000,
       reps: 9,
     })
     expect(res.status).toBe(400)
+  })
+
+  it('成功→失敗に修正できる', async () => {
+    const { a } = await threeSets()
+    const res = await send('PATCH', `/api/sets/${a.id}`, {
+      weightKg: 85,
+      reps: 0,
+      failed: true,
+    })
+
+    expect(res.status).toBe(200)
+    await expect(res.json()).resolves.toMatchObject({ reps: 0, failed: true })
   })
 
   it('存在しない ID は 404', async () => {

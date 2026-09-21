@@ -14,6 +14,7 @@ export function SetRow({
     weightKg: number
     reps: number
     note: string
+    failed: boolean
   }) => Promise<unknown>
   onDelete: () => void
   isPending: boolean
@@ -28,6 +29,7 @@ export function SetRow({
             weightKg: String(set.weightKg),
             reps: String(set.reps),
             note: set.note ?? '',
+            failed: set.failed,
           }}
           submitLabel="更新する"
           isPending={isPending}
@@ -47,8 +49,14 @@ export function SetRow({
         {set.setOrder}.
       </span>
       <span className="font-medium tabular-nums">{set.weightKg}kg</span>
-      <span className="text-muted-foreground">×</span>
-      <span className="tabular-nums">{set.reps}回</span>
+      {set.failed ? (
+        <span className="font-medium text-destructive">失敗</span>
+      ) : (
+        <>
+          <span className="text-muted-foreground">×</span>
+          <span className="tabular-nums">{set.reps}回</span>
+        </>
+      )}
       {set.note && (
         <span className="truncate text-muted-foreground text-xs">
           {set.note}

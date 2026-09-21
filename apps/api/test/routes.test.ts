@@ -84,16 +84,65 @@ describe('POST /api/workouts/:id/sets', () => {
     expect(res.status).toBe(404)
   })
 
-  it('負の重量は 400', async () => {
+  it('負の重量は「補助」として受け付ける（懸垂のアシスト）', async () => {
     const created = await post('/api/workouts', { performedOn: '2026-09-20' })
     const { id } = (await created.json()) as { id: string }
 
     const res = await post(`/api/workouts/${id}/sets`, {
       exerciseId: benchId,
-      weightKg: -5,
+      weightKg: -18,
+      reps: 10,
+    })
+
+    expect(res.status).toBe(201)
+    await expect(res.json()).resolves.toMatchObject({ weightKg: -18 })
+  })
+
+  it('補助が大きすぎる場合は 400', async () => {
+    const created = await post('/api/workouts', { performedOn: '2026-09-20' })
+    const { id } = (await created.json()) as { id: string }
+
+    const res = await post(`/api/workouts/${id}/sets`, {
+      exerciseId: benchId,
+      weightKg: -600,
       reps: 10,
     })
     expect(res.status).toBe(400)
+  })
+
+  it('失敗したセットは回数0で記録できる', async () => {
+    const created = await post('/api/workouts', { performedOn: '2026-09-20' })
+    const { id } = (await created.json()) as { id: string }
+
+    const res = await post(`/api/workouts/${id}/sets`, {
+      exerciseId: benchId,
+      weightKg: 85,
+      reps: 0,
+      failed: true,
+    })
+
+    expect(res.status).toBe(201)
+    await expect(res.json()).resolves.toMatchObject({
+      weightKg: 85,
+      reps: 0,
+      failed: true,
+    })
+  })
+
+  it('失敗フラグ無しで回数0は 400', async () => {
+    const created = await post('/api/workouts', { performedOn: '2026-09-20' })
+    const { id } = (await created.json()) as { id: string }
+
+    const res = await post(`/api/workouts/${id}/sets`, {
+      exerciseId: benchId,
+      weightKg: 85,
+      reps: 0,
+    })
+
+    expect(res.status).toBe(400)
+    await expect(res.json()).resolves.toEqual({
+      error: '成功したセットは回数を1以上にしてください',
+    })
   })
 })
 

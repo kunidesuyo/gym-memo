@@ -2,10 +2,16 @@ import { useForm } from '@tanstack/react-form'
 import { setFormSchema } from 'api/schema/set'
 import { useId } from 'react'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Field, FieldError, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 
-export type SetFormValues = { weightKg: string; reps: string; note: string }
+export type SetFormValues = {
+  weightKg: string
+  reps: string
+  note: string
+  failed: boolean
+}
 
 /**
  * セット入力フォーム。
@@ -25,6 +31,7 @@ export function SetForm({
     weightKg: number
     reps: number
     note: string
+    failed: boolean
   }) => Promise<unknown>
   isPending: boolean
   /** 編集時の初期値。省略すると空のフォーム（新規追加）になる。 */
@@ -35,7 +42,12 @@ export function SetForm({
   resetAfterSubmit?: boolean
 }) {
   const form = useForm({
-    defaultValues: initial ?? { weightKg: '', reps: '', note: '' },
+    defaultValues: initial ?? {
+      weightKg: '',
+      reps: '',
+      note: '',
+      failed: false,
+    },
     validators: { onSubmit: setFormSchema },
     onSubmit: async ({ value, formApi }) => {
       const parsed = setFormSchema.parse(value)
@@ -44,6 +56,7 @@ export function SetForm({
         // 同じ重量で複数セット組むので、重量は残して回数とメモだけ消す
         formApi.setFieldValue('reps', '')
         formApi.setFieldValue('note', '')
+        formApi.setFieldValue('failed', false)
       }
     },
   })
@@ -93,6 +106,10 @@ export function SetForm({
         )}
       </form.Field>
 
+      <form.Field name="failed">
+        {(field) => <FailedField field={field} />}
+      </form.Field>
+
       <div className="mt-5 flex gap-2">
         <form.Subscribe selector={(s) => s.isSubmitting}>
           {(isSubmitting) => (
@@ -108,6 +125,32 @@ export function SetForm({
         )}
       </div>
     </form>
+  )
+}
+
+/** 挙がらなかったセットを記録するためのチェックボックス。 */
+function FailedField({
+  field,
+}: {
+  field: {
+    name: string
+    state: { value: boolean }
+    handleChange(v: boolean): void
+  }
+}) {
+  const uid = useId()
+  const id = `${uid}-failed`
+  return (
+    <Field orientation="horizontal" className="mt-5 w-auto gap-1.5">
+      <Checkbox
+        id={id}
+        checked={field.state.value}
+        onCheckedChange={(checked) => field.handleChange(checked === true)}
+      />
+      <FieldLabel htmlFor={id} className="cursor-pointer font-normal text-sm">
+        失敗
+      </FieldLabel>
+    </Field>
   )
 }
 

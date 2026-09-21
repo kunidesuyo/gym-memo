@@ -49,6 +49,11 @@ export const workouts = sqliteTable('workouts', {
 /**
  * 1セットの記録。このアプリの主役テーブル。
  * 「前回この種目を何kgで何回やったか」を引くため exercise_id に索引を張る。
+ *
+ * weight_kg は**負数を許す**。懸垂のアシストマシンを使ったときの補助量を
+ * マイナスで表すため（-36kg → -18kg という減少がそのまま上達の記録になる）。
+ *
+ * failed は「挙がらなかった」セット。重量に挑戦して0回だった記録を残せる。
  */
 export const sets = sqliteTable(
   'sets',
@@ -63,6 +68,7 @@ export const sets = sqliteTable(
     setOrder: integer('set_order').notNull(),
     weightKg: real('weight_kg').notNull(),
     reps: integer('reps').notNull(),
+    failed: integer('failed', { mode: 'boolean' }).notNull().default(false),
     note: text('note'),
     createdAt: text('created_at').notNull().default(sql`(current_timestamp)`),
   },
