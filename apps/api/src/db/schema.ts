@@ -27,13 +27,15 @@ const id = () =>
  * 種目マスタ。ユーザーが自分で追加・編集・削除する。
  * 削除は物理削除で、セットから参照されている場合は API 側で拒否する（409）。
  *
- * category(PPL) と muscleGroup(細かい部位) は独立したカラム。
+ * category(分割) と muscleGroup(細かい部位) は独立したカラム。
  * 矛盾は DB 制約ではなく画面側の既定値で防ぐ（schema/exercise.ts の defaultCategoryFor）。
  */
 export const exercises = sqliteTable('exercises', {
   id: id(),
   name: text('name').notNull().unique(),
-  category: text('category').notNull().$type<'push' | 'pull' | 'legs'>(),
+  category: text('category')
+    .notNull()
+    .$type<'push' | 'pull' | 'legs' | 'other'>(),
   muscleGroup: text('muscle_group').notNull(),
   createdAt: text('created_at').notNull().default(sql`(current_timestamp)`),
 })

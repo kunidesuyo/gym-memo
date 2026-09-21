@@ -36,7 +36,18 @@ describe('ExerciseManager', () => {
   })
 
   describe('絞り込み', () => {
-    it('分割(PPL)のチェックで即座に絞り込む', async () => {
+    it('分割は PPL +「その他」の4つ', async () => {
+      renderWithRouter(<ExerciseManager />)
+      await screen.findByText('ベンチプレス')
+
+      for (const label of ['Push', 'Pull', 'Legs', 'その他']) {
+        expect(
+          screen.getByRole('checkbox', { name: label }),
+        ).toBeInTheDocument()
+      }
+    })
+
+    it('分割のチェックで即座に絞り込む', async () => {
       const user = userEvent.setup()
       renderWithRouter(<ExerciseManager />)
       await screen.findByText('ベンチプレス')

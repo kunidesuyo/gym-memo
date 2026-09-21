@@ -1,7 +1,10 @@
 import { z } from 'zod'
 
-/** PPL 分割。種目選択の絞り込みに使う。 */
-export const categories = ['push', 'pull', 'legs'] as const
+/**
+ * 分割。PPL に「その他」を足した4分類。
+ * 腹筋系は PPL のどこにも綺麗に入らないので other に置く。
+ */
+export const categories = ['push', 'pull', 'legs', 'other'] as const
 export const categorySchema = z.enum(categories, '分割の指定が不正です')
 export type Category = z.infer<typeof categorySchema>
 
@@ -25,6 +28,7 @@ export const categoryLabels: Record<Category, string> = {
   push: 'Push',
   pull: 'Pull',
   legs: 'Legs',
+  other: 'その他',
 }
 
 export const muscleGroupLabels: Record<MuscleGroup, string> = {
@@ -55,7 +59,7 @@ export const defaultCategoryFor: Record<MuscleGroup, Category> = {
   hamstrings: 'legs',
   glutes: 'legs',
   calves: 'legs',
-  abs: 'legs', // PPL に素直に収まらないので便宜的。ユーザーが変更できる
+  abs: 'other',
 }
 
 export const newExerciseSchema = z.object({

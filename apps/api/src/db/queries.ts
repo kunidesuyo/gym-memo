@@ -3,7 +3,10 @@ import type { NewExercise } from '../schema/exercise'
 import type { Db } from './index'
 import { exercises, sets, workouts } from './schema'
 
-export function listExercises(db: Db, category?: 'push' | 'pull' | 'legs') {
+export function listExercises(
+  db: Db,
+  category?: 'push' | 'pull' | 'legs' | 'other',
+) {
   return db
     .select()
     .from(exercises)
