@@ -16,7 +16,8 @@ export type Workout = InferResponseType<
 >
 export type WorkoutSet = Workout['sets'][number]
 export type WorkoutSummary = InferResponseType<
-  typeof client.api.workouts.$get
+  typeof client.api.workouts.$get,
+  200
 >[number]
 /** ステータスを 200 に絞らないと zValidator の 400 レスポンス型が混ざる。 */
 export type LastSetsResult = InferResponseType<

@@ -6,9 +6,16 @@ import { z } from 'zod'
  * サーバーとクライアントでルールがズレないようにするのが目的。
  */
 export const newSetSchema = z.object({
-  exerciseId: z.uuid(),
-  weightKg: z.number().nonnegative().max(1000, '重量が大きすぎます'),
-  reps: z.number().int().positive().max(1000, '回数が大きすぎます'),
+  exerciseId: z.uuid('種目の ID が不正です'),
+  weightKg: z
+    .number()
+    .nonnegative('重量は0以上で指定してください')
+    .max(1000, '重量が大きすぎます'),
+  reps: z
+    .number()
+    .int('回数は整数で指定してください')
+    .positive('回数は1以上で指定してください')
+    .max(1000, '回数が大きすぎます'),
   note: z.string().trim().max(200, 'メモが長すぎます').nullish(),
 })
 
@@ -57,5 +64,5 @@ export const setFormSchema = z.object({
 
 /** 「前回の記録」取得時、記録中のワークアウト自身を除外するためのクエリ。 */
 export const lastSetsQuerySchema = z.object({
-  excludeWorkoutId: z.uuid().optional(),
+  excludeWorkoutId: z.uuid('セッションの ID が不正です').optional(),
 })

@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 /** PPL 分割。種目選択の絞り込みに使う。 */
 export const categories = ['push', 'pull', 'legs'] as const
-export const categorySchema = z.enum(categories)
+export const categorySchema = z.enum(categories, '分割の指定が不正です')
 export type Category = z.infer<typeof categorySchema>
 
 /** 細かい部位。情報として持つ。 */
@@ -18,7 +18,7 @@ export const muscleGroups = [
   'calves',
   'abs',
 ] as const
-export const muscleGroupSchema = z.enum(muscleGroups)
+export const muscleGroupSchema = z.enum(muscleGroups, '部位の指定が不正です')
 export type MuscleGroup = z.infer<typeof muscleGroupSchema>
 
 export const categoryLabels: Record<Category, string> = {

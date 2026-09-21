@@ -1,4 +1,3 @@
-import { zValidator } from '@hono/zod-validator'
 import { Hono } from 'hono'
 import { createDb } from './db'
 import {
@@ -26,6 +25,7 @@ import {
   updateSetSchema,
 } from './schema/set'
 import { newWorkoutSchema } from './schema/workout'
+import { zValidator } from './validator'
 
 /**
  * ルート定義。ここが Hono RPC の型の源になる。
@@ -36,11 +36,14 @@ import { newWorkoutSchema } from './schema/workout'
  */
 export const routes = new Hono<{ Bindings: Env }>()
   .get('/api/health', (c) =>
-    c.json({
-      status: 'ok',
-      runtime: 'workers',
-      time: new Date().toISOString(),
-    }),
+    c.json(
+      {
+        status: 'ok',
+        runtime: 'workers',
+        time: new Date().toISOString(),
+      },
+      200,
+    ),
   )
 
   .get(
@@ -85,7 +88,7 @@ export const routes = new Hono<{ Bindings: Env }>()
 
       const row = await updateExercise(db, id, input)
       if (!row) return c.json({ error: 'exercise not found' }, 404)
-      return c.json(row)
+      return c.json(row, 200)
     },
   )
 
@@ -115,7 +118,7 @@ export const routes = new Hono<{ Bindings: Env }>()
 
   .get('/api/workouts', async (c) => {
     const rows = await listWorkouts(createDb(c.env.DB))
-    return c.json(rows)
+    return c.json(rows, 200)
   })
 
   .post('/api/workouts', zValidator('json', newWorkoutSchema), async (c) => {
@@ -128,7 +131,7 @@ export const routes = new Hono<{ Bindings: Env }>()
     const { id } = c.req.valid('param')
     const workout = await getWorkout(createDb(c.env.DB), id)
     if (!workout) return c.json({ error: 'workout not found' }, 404)
-    return c.json(workout)
+    return c.json(workout, 200)
   })
 
   .post(
@@ -173,7 +176,7 @@ export const routes = new Hono<{ Bindings: Env }>()
       const { id } = c.req.valid('param')
       const row = await updateSet(createDb(c.env.DB), id, c.req.valid('json'))
       if (!row) return c.json({ error: 'set not found' }, 404)
-      return c.json(row)
+      return c.json(row, 200)
     },
   )
 
@@ -208,7 +211,7 @@ export const routes = new Hono<{ Bindings: Env }>()
       const { id } = c.req.valid('param')
       const { excludeWorkoutId } = c.req.valid('query')
       const last = await getLastSets(createDb(c.env.DB), id, excludeWorkoutId)
-      return c.json(last)
+      return c.json(last, 200)
     },
   )
 

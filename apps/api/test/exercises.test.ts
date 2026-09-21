@@ -73,6 +73,20 @@ describe('POST /api/exercises', () => {
     expect(res.status).toBe(400)
   })
 
+  it('400 の body は { error: string } で、Zod のメッセージがそのまま入る', async () => {
+    const res = await send('POST', '/api/exercises', {
+      name: '   ',
+      category: 'push',
+      muscleGroup: 'chest',
+    })
+
+    // 素の zValidator は { success:false, error:<ZodErrorオブジェクト> } を返す。
+    // それだとクライアントが body.error を文字列として扱えず "[object Object]" になる。
+    await expect(res.json()).resolves.toEqual({
+      error: '種目名を入力してください',
+    })
+  })
+
   it('enum にない部位は 400', async () => {
     const res = await send('POST', '/api/exercises', {
       name: '謎の種目',

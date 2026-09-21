@@ -8,5 +8,5 @@ import { z } from 'zod'
  * 存在しない ID は 404 で返せばよい。
  */
 export const idParamSchema = z.object({
-  id: z.uuid(),
+  id: z.uuid('ID の形式が不正です'),
 })

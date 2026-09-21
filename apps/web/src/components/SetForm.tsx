@@ -1,5 +1,6 @@
 import { useForm } from '@tanstack/react-form'
 import { setFormSchema } from 'api/schema/set'
+import { useId } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -136,22 +137,28 @@ function TextField({
   className?: string
   wrapperClassName?: string
 }) {
+  // id は field.name（"weightKg" 等の固定値）にしないこと。
+  // 追加フォームと編集行の SetForm が同時に描画されると DOM 内で id が重複し、
+  // htmlFor / aria-describedby が別フォームの入力欄に解決されてしまう。
+  const uid = useId()
+  const inputId = `${uid}-${field.name}`
+  const errorId = `${inputId}-error`
+
   const errors: string[] = field.state.meta.errors
     .map((e) =>
       typeof e === 'string' ? e : ((e as { message?: string })?.message ?? ''),
     )
     .filter(Boolean)
 
-  const errorId = `${field.name}-error`
   const hasError = errors.length > 0
 
   return (
     <div className={`flex flex-col gap-1 ${wrapperClassName ?? ''}`}>
-      <Label htmlFor={field.name} className="text-muted-foreground text-xs">
+      <Label htmlFor={inputId} className="text-muted-foreground text-xs">
         {label}
       </Label>
       <Input
-        id={field.name}
+        id={inputId}
         name={field.name}
         inputMode={inputMode}
         placeholder={placeholder}

@@ -44,6 +44,16 @@ describe('POST /api/workouts', () => {
   it('日付の形式が不正なら 400（Zod が弾く）', async () => {
     const res = await post('/api/workouts', { performedOn: '2026/09/20' })
     expect(res.status).toBe(400)
+    await expect(res.json()).resolves.toEqual({
+      error: 'YYYY-MM-DD 形式で指定してください',
+    })
+  })
+
+  it('UUID でないパスパラメータも { error: string } で返す', async () => {
+    const res = await exports.default.fetch(`${BASE}/api/workouts/not-a-uuid`)
+    expect(res.status).toBe(400)
+    const body = (await res.json()) as { error: string }
+    expect(typeof body.error).toBe('string')
   })
 })
 

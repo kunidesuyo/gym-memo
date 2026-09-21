@@ -54,8 +54,15 @@ Hono RPC の型はチェーンで積み上がる。途中で変数に代入し�
 web が型解決するのはこのファイルだけ（`api/routes` として export）。Worker エントリの `index.ts` は読まない。
 
 **成功レスポンスに `c.json(x, 200)` と明示する**
-省くとステータスが `ContentfulStatusCode` になり、zValidator の 400 が生えたとき
-`InferResponseType<..., 200>` で絞れなくなる。
+省くとステータスが `ContentfulStatusCode`（広い型）になり、**成功 body が
+404 / 409 / 500 など他の全ステータスの型に混入する**。
+（200 側の絞り込み自体は省いても効くが、エラー側の型が壊れる）
+
+**バリデーションは `./validator` の `zValidator` を使う**
+`@hono/zod-validator` を直接 import しないこと。素のままだと 400 の body が
+`{ success: false, error: <ZodError オブジェクト> }` になり、クライアントが
+`body.error` を文字列として扱えず画面に `[object Object]` が出る。
+ラッパーが `{ error: string }` に揃えている。
 
 **`InferResponseType` には必ず `, 200` を付ける**
 付けないと 400 のエラー型とのユニオンになる。型の定義は `apps/web/src/api/hooks.ts` に集約。

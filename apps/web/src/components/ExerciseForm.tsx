@@ -9,6 +9,7 @@ import {
   muscleGroups,
   newExerciseSchema,
 } from 'api/schema/exercise'
+import { useId } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -32,6 +33,9 @@ export function ExerciseForm({
   onCancel: () => void
   error?: Error | null
 }) {
+  // 同じ理由で id はフォームインスタンスごとに一意にする（SetForm のコメント参照）
+  const uid = useId()
+
   const form = useForm({
     defaultValues: initial ?? {
       name: '',
@@ -60,23 +64,25 @@ export function ExerciseForm({
           return (
             <div className="flex flex-col">
               <Label
-                htmlFor={field.name}
+                htmlFor={`${uid}-${field.name}`}
                 className="mb-1 text-muted-foreground text-xs"
               >
                 種目名
               </Label>
               <Input
-                id={field.name}
+                id={`${uid}-${field.name}`}
                 name={field.name}
                 value={field.state.value}
                 onBlur={field.handleBlur}
                 onChange={(e) => field.handleChange(e.target.value)}
                 aria-invalid={message != null}
-                aria-describedby={message ? `${field.name}-error` : undefined}
+                aria-describedby={
+                  message ? `${uid}-${field.name}-error` : undefined
+                }
               />
               {message && (
                 <p
-                  id={`${field.name}-error`}
+                  id={`${uid}-${field.name}-error`}
                   role="alert"
                   className="mt-1 text-destructive text-xs"
                 >
@@ -93,13 +99,13 @@ export function ExerciseForm({
           {(field) => (
             <div className="flex flex-1 flex-col">
               <Label
-                htmlFor={field.name}
+                htmlFor={`${uid}-${field.name}`}
                 className="mb-1 text-muted-foreground text-xs"
               >
                 部位
               </Label>
               <select
-                id={field.name}
+                id={`${uid}-${field.name}`}
                 name={field.name}
                 value={field.state.value}
                 onChange={(e) => {
@@ -124,13 +130,13 @@ export function ExerciseForm({
           {(field) => (
             <div className="flex flex-1 flex-col">
               <Label
-                htmlFor={field.name}
+                htmlFor={`${uid}-${field.name}`}
                 className="mb-1 text-muted-foreground text-xs"
               >
                 分割
               </Label>
               <select
-                id={field.name}
+                id={`${uid}-${field.name}`}
                 name={field.name}
                 value={field.state.value}
                 onChange={(e) => field.handleChange(e.target.value as Category)}

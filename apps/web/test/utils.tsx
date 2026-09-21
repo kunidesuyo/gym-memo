@@ -61,6 +61,7 @@ export function renderWithRouter(ui: ReactElement) {
     history: createMemoryHistory({ initialEntries: ['/'] }),
   })
 
-  // biome-ignore lint/suspicious/noExplicitAny: テスト用の最小ルートツリーは本番の型と一致しない
-  return renderWithQuery(<RouterProvider router={router as any} />)
+  // キャスト不要。RouterProvider は TRouter extends AnyRouter のジェネリックなので、
+  // Register に登録した本番 router 以外も推論で受け取れる。
+  return renderWithQuery(<RouterProvider router={router} />)
 }

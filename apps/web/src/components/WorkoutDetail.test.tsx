@@ -214,4 +214,28 @@ describe('WorkoutDetail', () => {
       screen.getByRole('heading', { name: '今日の記録' }),
     ).toBeInTheDocument()
   })
+
+  it('追加フォームと編集フォームが同時に出ても label が別々の入力欄を指す', async () => {
+    withExistingSets()
+    renderWithRouter(<WorkoutDetail workoutId={WORKOUT_ID} />)
+    const user = await selectBenchPress()
+
+    // 種目を選んだので追加フォームが出ている。さらに1行を編集モードにする
+    const row = (await (await todaySection()).findByText('60kg')).closest('li')
+    if (!row) throw new Error('行が見つかりません')
+    await user.click(within(row).getByRole('button', { name: '編集' }))
+
+    const weightInputs = screen.getAllByLabelText('重量 (kg)')
+    expect(weightInputs).toHaveLength(2)
+
+    // id が固定値だと両方の label が先頭の input に解決され、同一要素が2つ返る。
+    // useId で一意化されていれば別々の要素になる。
+    expect(weightInputs[0]).not.toBe(weightInputs[1])
+    expect(weightInputs[0]?.id).not.toBe(weightInputs[1]?.id)
+
+    // 編集側には初期値が入っており、追加側は空のまま
+    expect(
+      weightInputs.map((i) => (i as HTMLInputElement).value).sort(),
+    ).toEqual(['', '60'])
+  })
 })
