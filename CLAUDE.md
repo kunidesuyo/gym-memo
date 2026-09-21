@@ -38,6 +38,11 @@ pnpm db:migrate:local # ローカル D1 に適用
 pnpm db:seed:local    # 種目マスタ投入
 pnpm db:reset:local   # .wrangler を消してやり直し
 pnpm types            # wrangler types 再生成（wrangler.jsonc を変えたら）
+
+pnpm deploy:dry       # ビルド + 設定検証（デプロイはしない）
+pnpm deploy           # ビルド + wrangler deploy
+pnpm db:migrate:remote  # 本番 D1 にマイグレーション
+pnpm db:seed:remote     # 本番 D1 に種目マスタ
 ```
 
 ローカル実行は **完全にローカル**（workerd + SQLite）。Cloudflare への通信も課金も無い。
@@ -99,8 +104,14 @@ web が型解決するのはこのファイルだけ（`api/routes` として ex
 
 ## 現在地
 
-**フェーズ1 と MVP は完了**（テスト79本）。次は**フェーズ2 = Cloudflare へのデプロイ**。
-アカウント作成とドメイン購入がそこで必要になる。
+**フェーズ1 と MVP は完了**（テスト83本）。**フェーズ2 = Cloudflare へのデプロイ**に着手中。
+
+デプロイ前の安全設定は済んでいる（`workers_dev: false` / `observability` / `onError`）。
+残りは**アカウント作成・ドメイン取得・D1 作成・Terraform で Access**で、
+いずれも対話的な操作が要るためユーザーの手元で行う。
+
+⚠️ **`workers_dev: false` を外さないこと。** 外して `wrangler deploy` すると
+`gym-memo.<subdomain>.workers.dev` が生え、Access を張るまで無認証で公開される。
 
 バックログ（画像アップロード/R2、グラフ、PR、オフライン対応 など）は `docs/design-notes.md` 15章。
 

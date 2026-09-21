@@ -118,3 +118,24 @@ describe('DELETE /api/workouts/:id', () => {
     expect(res.status).toBe(404)
   })
 })
+
+describe('onError（未捕捉の例外）', () => {
+  it('DB の制約違反は 500 と { error: string } になる', async () => {
+    const db = testDb()
+    const w = await createWorkout(db, '2026-09-21')
+
+    // 形式は正しいが存在しない種目 ID → 外部キー制約違反で例外が飛ぶ。
+    // onError が無いと Hono 既定のプレーンテキスト 500 になる。
+    const res = await send('POST', `/api/workouts/${w.id}/sets`, {
+      exerciseId: MISSING_ID,
+      weightKg: 60,
+      reps: 10,
+    })
+
+    expect(res.status).toBe(500)
+    const body = (await res.json()) as { error: string }
+    expect(typeof body.error).toBe('string')
+    // 内部のエラー文言をそのまま漏らさない
+    expect(body.error).not.toMatch(/FOREIGN KEY|SQLITE|constraint/i)
+  })
+})

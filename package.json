@@ -10,10 +10,14 @@
     "check": "biome check .",
     "check:fix": "biome check --write .",
     "types": "wrangler types",
-    "db:migrate:local": "wrangler d1 migrations apply gym-memo --local",
+    "deploy": "pnpm build && wrangler deploy",
+    "deploy:dry": "pnpm build && wrangler deploy --dry-run",
     "db:generate": "pnpm --filter api db:generate",
+    "db:migrate:local": "wrangler d1 migrations apply gym-memo --local",
     "db:seed:local": "wrangler d1 execute gym-memo --local --file=apps/api/seed.sql",
-    "db:reset:local": "rm -rf .wrangler && pnpm db:migrate:local && pnpm db:seed:local"
+    "db:reset:local": "rm -rf .wrangler && pnpm db:migrate:local && pnpm db:seed:local",
+    "db:migrate:remote": "wrangler d1 migrations apply gym-memo --remote",
+    "db:seed:remote": "wrangler d1 execute gym-memo --remote --file=apps/api/seed.sql"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.14",

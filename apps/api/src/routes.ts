@@ -215,4 +215,26 @@ export const routes = new Hono<{ Bindings: Env }>()
     },
   )
 
+/**
+ * 例外の受け皿。
+ *
+ * ⚠️ チェーンの「外」で呼ぶこと。チェーンに繋ぐと RPC の型の積み上げに混ざる。
+ * `typeof routes` は宣言時点で確定するので、後から呼んでも AppType は変わらない。
+ *
+ * Workers Logs は構造化ログでないと検索できないので JSON で出す。
+ */
+routes.onError((err, c) => {
+  console.error(
+    JSON.stringify({
+      message: 'unhandled error',
+      error: err instanceof Error ? err.message : String(err),
+      method: c.req.method,
+      path: new URL(c.req.url).pathname,
+    }),
+  )
+  return c.json({ error: 'サーバーでエラーが発生しました' }, 500)
+})
+
+routes.notFound((c) => c.json({ error: 'not found' }, 404))
+
 export type AppType = typeof routes

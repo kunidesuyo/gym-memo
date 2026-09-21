@@ -6,6 +6,20 @@
   // 両方が受け付ける日付に合わせる（テスト側の上限が 2026-08-22 だった）。
   "compatibility_date": "2026-08-22",
 
+  // ⚠️ 無認証の公開 URL を作らせない。
+  // 既定のままデプロイすると gym-memo.<subdomain>.workers.dev が自動で生え、
+  // 誰でも D1 を読み書きできてしまう。Cloudflare Access を張るまでは必ず false。
+  // 独自ドメインを取得したら routes に custom_domain を足す。
+  "workers_dev": false,
+  "preview_urls": false,
+
+  // logs と traces は別々に指定が必要。enabled だけではトレースは有効にならない。
+  "observability": {
+    "enabled": true,
+    "logs": { "enabled": true, "head_sampling_rate": 1 },
+    "traces": { "enabled": true, "head_sampling_rate": 1 }
+  },
+
   // 静的アセット = Vite がビルドした SPA。
   // /api/* だけを Worker に回し、それ以外はアセット配信 + SPA フォールバック。
   "assets": {

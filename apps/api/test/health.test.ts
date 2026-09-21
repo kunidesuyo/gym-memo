@@ -16,8 +16,9 @@ describe('GET /api/health', () => {
     })
   })
 
-  it('未定義の API パスは 404 を返す', async () => {
+  it('未定義の API パスは 404 を返す（body も { error: string }）', async () => {
     const res = await exports.default.fetch('https://example.com/api/unknown')
     expect(res.status).toBe(404)
+    await expect(res.json()).resolves.toEqual({ error: 'not found' })
   })
 })
