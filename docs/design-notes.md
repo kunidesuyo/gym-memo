@@ -1860,9 +1860,22 @@ Claude Code の既定は `claude-md-or-agents-md`:
 
 **このプロジェクトは CLAUDE.md を作った直後だったので、AGENTS.md が無視される状態だった。**
 
-→ `CLAUDE.md` の先頭に **`@AGENTS.md`** のインポートを置いて解決した。
-   `/config` の Project instructions を `claude-md-and-agents-md` にする手もあるが、
-   それは**各自の設定**なので clone した人には伝わらない。インポートならリポジトリで完結する。
+→ 最終的に **AGENTS.md を廃止し、`intent-skills` ブロックを CLAUDE.md に直接置いた**。
+
+当初は `CLAUDE.md` 先頭に `@AGENTS.md` のインポートを置いて解決したが、
+指示ファイルが2つに分かれるのが分かりにくいため1つに寄せた。
+
+Intent は AGENTS.md / CLAUDE.md / .cursorrules / copilot-instructions.md を
+**サポート対象の設定ファイル**として扱い、「既にブロックがあるファイルを更新する」
+仕様なので、CLAUDE.md に移しても再実行で AGENTS.md が復活しない。
+`install --dry-run` で `Generated skill loading guidance for CLAUDE.md.` と出ることを確認済み。
+
+⚠️ トレードオフ: AGENTS.md は Codex / Cursor など**他エージェントとの共有ファイル**でもある。
+今後それらを併用するなら AGENTS.md を復活させて `@AGENTS.md` インポートに戻すほうがよい。
+
+⚠️ **`.agents/` ディレクトリと `AGENTS.md` は無関係**。名前が紛らわしいが、
+前者は shadcn スキルの実体置き場（`.claude/skills/` からシンボリックリンク）で、
+AGENTS.md を消しても影響しない。
 
 動作確認:
 

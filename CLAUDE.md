@@ -1,5 +1,3 @@
-@AGENTS.md
-
 # gym-memo
 
 自分専用の筋トレ記録アプリ。**技術学習が主目的**（TanStack 系 → Terraform/Cloudflare の順で優先）。
@@ -99,10 +97,19 @@ web が型解決するのはこのファイルだけ（`api/routes` として ex
 
 バックログ（画像アップロード/R2、グラフ、PR、オフライン対応 など）は `docs/design-notes.md` 15章。
 
-## AGENTS.md について
+## スキルの読み込み（TanStack Intent）
 
-冒頭の `@AGENTS.md` は TanStack Intent が書いたスキル読み込み案内を取り込むためのもの。
+以下は `npx @tanstack/intent install` が生成した管理ブロック。
+TanStack のスキルは `node_modules` 内にあり Claude Code のスキャン対象外なので、
+この案内を頼りに必要時だけ読みに行く。**手で編集しないこと**（再実行時に上書きされる）。
 
-⚠️ **CLAUDE.md がある場合、Claude Code は AGENTS.md を読まない**（CLAUDE.md が優先される）。
-このインポートが無いと Intent の案内が効かなくなるので消さないこと。
-AGENTS.md は Codex / Cursor など他エージェントとの共有ファイルでもある。
+<!-- intent-skills:start -->
+## Skill Loading
+
+Before editing files for a substantial task:
+- Run `pnpm dlx @tanstack/intent@latest list` from the workspace root to see available local skills.
+- If a listed skill matches the task, run `pnpm dlx @tanstack/intent@latest load <package>#<skill>` before changing files.
+- Use the loaded `SKILL.md` guidance while making the change.
+- Monorepos: when working across packages, run the skill check from the workspace root and prefer the local skill for the package being changed.
+- Multiple matches: prefer the most specific local skill for the package or concern you are changing; load additional skills only when the task spans multiple packages or concerns.
+<!-- intent-skills:end -->
