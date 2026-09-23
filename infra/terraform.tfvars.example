@@ -1,0 +1,14 @@
+# これをコピーして terraform.tfvars を作る（実ファイルは .gitignore 済み）。
+#   cp terraform.tfvars.example terraform.tfvars
+#
+# ⚠️ API トークンはここに書かない。tfstate に平文で残る。
+#    実行時に環境変数で渡す:
+#      CLOUDFLARE_API_TOKEN="$(security find-generic-password -s cloudflare-terraform -w)" terraform plan
+
+account_id    = "6cb6e5b05fb1311326595ee53b355a74"
+allowed_email = "you@example.com"
+
+# 以下は variables.tf に既定値があるので、変えたいときだけ書く
+# zone_name     = "kuni-app.dev"
+# app_subdomain = "gym-memo"
+# team_name     = "kuni-app"

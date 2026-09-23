@@ -12,6 +12,9 @@ dist/
 *.tfstate.*
 *.tfvars
 !*.tfvars.example
+# 保存された plan。バイナリだが tfvars の値を含むのでコミットしない
+tfplan
+*.tfplan
 crash.log
 
 # Claude Code の個人設定（共有するのは .claude/settings.json のみ）
