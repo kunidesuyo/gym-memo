@@ -133,7 +133,7 @@ export function SetForm({
       </form.Field>
 
       <form.Field name="isSuccessful">
-        {(field) => <CheckField field={field} label="挙がった" />}
+        {(field) => <CheckField field={field} label="成功" />}
       </form.Field>
 
       <form.Field name="isMainSet">

@@ -170,14 +170,14 @@ describe('SetForm', () => {
     expect(screen.getByLabelText('回数')).toHaveValue('10')
   })
 
-  it('「挙がった」を外すと回数0でも送信できる', async () => {
+  it('「成功」を外すと回数0でも送信できる', async () => {
     const user = userEvent.setup()
     const onSubmit = vi.fn().mockResolvedValue(undefined)
     render(<SetForm onSubmit={onSubmit} isPending={false} />)
 
     await user.type(screen.getByLabelText('重量 (kg)'), '85')
     await user.type(screen.getByLabelText('回数'), '0')
-    await user.click(screen.getByRole('checkbox', { name: '挙がった' }))
+    await user.click(screen.getByRole('checkbox', { name: '成功' }))
     await user.click(screen.getByRole('button', { name: '記録する' }))
 
     expect(onSubmit).toHaveBeenCalledWith({
@@ -211,14 +211,14 @@ describe('SetForm', () => {
   it('チェックボックスの初期状態はラベルと一致する', async () => {
     render(<SetForm onSubmit={vi.fn()} isPending={false} />)
 
-    // 「挙がった」は既定オン（成功）、「メインセット」は既定オフ
-    expect(screen.getByRole('checkbox', { name: '挙がった' })).toBeChecked()
+    // 「成功」は既定オン、「メインセット」は既定オフ
+    expect(screen.getByRole('checkbox', { name: '成功' })).toBeChecked()
     expect(
       screen.getByRole('checkbox', { name: 'メインセット' }),
     ).not.toBeChecked()
   })
 
-  it('「挙がった」のままで回数0なら弾く', async () => {
+  it('「成功」のままで回数0なら弾く', async () => {
     const user = userEvent.setup()
     const onSubmit = vi.fn()
     render(<SetForm onSubmit={onSubmit} isPending={false} />)
