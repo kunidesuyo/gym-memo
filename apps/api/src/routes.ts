@@ -8,6 +8,7 @@ import {
   deleteExercise,
   deleteSet,
   deleteWorkout,
+  findWorkoutByDate,
   getExercise,
   getExerciseHistory,
   getLastSets,
@@ -123,7 +124,19 @@ export const routes = new Hono<{ Bindings: Env }>()
 
   .post('/api/workouts', zValidator('json', newWorkoutSchema), async (c) => {
     const { performedOn } = c.req.valid('json')
-    const workout = await createWorkout(createDb(c.env.DB), performedOn)
+    const db = createDb(c.env.DB)
+
+    // 1日1セッション。DB の UNIQUE 索引で弾かれると 500 になるので、
+    // ここで意味のある 409 に変える（既存の id を添えて画面が遷移できるようにする）。
+    const existing = await findWorkoutByDate(db, performedOn)
+    if (existing) {
+      return c.json(
+        { error: 'この日のセッションは既にあります', workoutId: existing.id },
+        409,
+      )
+    }
+
+    const workout = await createWorkout(db, performedOn)
     return c.json(workout, 201)
   })
 

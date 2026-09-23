@@ -142,7 +142,7 @@ function assignCategory(name: string): [string, string] {
     return ['push', 'chest']
   if (/カール/.test(name)) return ['pull', 'biceps']
   if (/デッドリフト/.test(name)) return ['legs', 'hamstrings']
-  if (/腹筋|アブローラー/.test(name)) return ['other', 'abs']
+  if (/腹筋|アブローラー/.test(name)) return ['other', 'other']
   if (/レッグカール/.test(name)) return ['legs', 'hamstrings']
   if (/カーフレイズ/.test(name)) return ['legs', 'calves']
   if (/サイ$/.test(name)) return ['legs', 'glutes']

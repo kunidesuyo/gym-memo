@@ -160,16 +160,8 @@ export const lastSetsFixture: LastSetsResult = {
 }
 
 export const workoutsFixture: WorkoutSummary[] = [
-  {
-    id: '01a0bf20-0000-7000-8000-000000000010',
-    performedOn: '2026-09-20',
-    setCount: 3,
-  },
-  {
-    id: '01a0bf19-0000-7000-8000-000000000009',
-    performedOn: '2026-09-13',
-    setCount: 5,
-  },
+  { id: '01a0bf20-0000-7000-8000-000000000010', performedOn: '2026-09-20' },
+  { id: '01a0bf19-0000-7000-8000-000000000009', performedOn: '2026-09-13' },
 ]
 
 export const handlers = [
@@ -192,7 +184,6 @@ export const handlers = [
     return HttpResponse.json({
       id: String(params.id),
       createdAt: '2026-09-01',
-      setCount: 0,
       ...body,
     })
   }),

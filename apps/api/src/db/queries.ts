@@ -70,18 +70,26 @@ export async function deleteExercise(db: Db, id: string) {
   await db.delete(exercises).where(eq(exercises.id, id))
 }
 
-/** セッション一覧（新しい順）。セット数を添えて一覧表示に使う。 */
+/**
+ * セッション一覧（新しい順）。
+ *
+ * ホームのカレンダーが「記録のある日」を塗るために全件を引く。
+ * 2年分でも数百行なので、月ごとに絞らず一度に返して手元で引く。
+ */
 export function listWorkouts(db: Db) {
   return db
-    .select({
-      id: workouts.id,
-      performedOn: workouts.performedOn,
-      setCount: sql<number>`count(${sets.id})`,
-    })
+    .select({ id: workouts.id, performedOn: workouts.performedOn })
     .from(workouts)
-    .leftJoin(sets, eq(sets.workoutId, workouts.id))
-    .groupBy(workouts.id)
     .orderBy(desc(workouts.performedOn), desc(workouts.id))
+}
+
+/** その日のセッション。1日1セッションなので高々1件。 */
+export async function findWorkoutByDate(db: Db, performedOn: string) {
+  const [row] = await db
+    .select()
+    .from(workouts)
+    .where(eq(workouts.performedOn, performedOn))
+  return row ?? null
 }
 
 export async function createWorkout(db: Db, performedOn: string) {

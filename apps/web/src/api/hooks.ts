@@ -153,10 +153,12 @@ export function useCreateWorkout() {
   return useMutation({
     mutationFn: async (performedOn: string) => {
       const res = await client.api.workouts.$post({ json: { performedOn } })
-      if (!res.ok) throw new Error('セッションの作成に失敗しました')
+      // 1日1セッションなので、その日が埋まっていれば 409。文言はサーバーのものを使う。
+      if (!res.ok) throw await errorFrom(res, 'セッションの作成に失敗しました')
       return res.json()
     },
-    onSuccess: () => {
+    // 409 のときこそ一覧が古い。失敗側でも取り直す。
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: keys.workouts() })
     },
   })
@@ -221,9 +223,8 @@ export function useAddSet(workoutId: string) {
 
     onSettled: () => {
       qc.invalidateQueries({ queryKey: keys.workout(workoutId) })
-      // セット数が変わるので一覧も古くなる
-      qc.invalidateQueries({ queryKey: keys.workouts() })
-      // 「前回の記録」は excludeWorkoutId で今日を除外しているため影響を受けない。
+      // セッション一覧（ホームのカレンダー）は日付だけなので、セットが増えても古くならない。
+      // 「前回の記録」も excludeWorkoutId で今日を除外しているため影響を受けない。
       // ここを無闇に invalidate しないのが粒度設計のポイント。
     },
   })
@@ -323,7 +324,6 @@ export function useDeleteSet(workoutId: string) {
 
     onSettled: () => {
       qc.invalidateQueries({ queryKey: keys.workout(workoutId) })
-      qc.invalidateQueries({ queryKey: keys.workouts() })
     },
   })
 }

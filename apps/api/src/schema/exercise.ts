@@ -19,7 +19,7 @@ export const muscleGroups = [
   'hamstrings',
   'glutes',
   'calves',
-  'abs',
+  'other',
 ] as const
 export const muscleGroupSchema = z.enum(muscleGroups, '部位の指定が不正です')
 export type MuscleGroup = z.infer<typeof muscleGroupSchema>
@@ -40,8 +40,8 @@ export const muscleGroupLabels: Record<MuscleGroup, string> = {
   quads: '大腿四頭',
   hamstrings: 'ハム',
   glutes: '臀部',
-  calves: 'ふくらはぎ',
-  abs: '腹',
+  calves: 'カーフ',
+  other: 'その他',
 }
 
 /**
@@ -59,7 +59,7 @@ export const defaultCategoryFor: Record<MuscleGroup, Category> = {
   hamstrings: 'legs',
   glutes: 'legs',
   calves: 'legs',
-  abs: 'other',
+  other: 'other',
 }
 
 export const newExerciseSchema = z.object({

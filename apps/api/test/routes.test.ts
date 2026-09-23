@@ -41,6 +41,25 @@ describe('POST /api/workouts', () => {
     })
   })
 
+  it('同じ日に2つ目を作ろうとすると 409（1日1セッション）', async () => {
+    const first = await post('/api/workouts', { performedOn: '2026-09-20' })
+    const { id } = (await first.json()) as { id: string }
+
+    const res = await post('/api/workouts', { performedOn: '2026-09-20' })
+    expect(res.status).toBe(409)
+    // 画面が既存のセッションへ遷移できるよう id を添えて返す
+    await expect(res.json()).resolves.toEqual({
+      error: 'この日のセッションは既にあります',
+      workoutId: id,
+    })
+  })
+
+  it('日付が違えば作れる', async () => {
+    await post('/api/workouts', { performedOn: '2026-09-20' })
+    const res = await post('/api/workouts', { performedOn: '2026-09-21' })
+    expect(res.status).toBe(201)
+  })
+
   it('日付の形式が不正なら 400（Zod が弾く）', async () => {
     const res = await post('/api/workouts', { performedOn: '2026/09/20' })
     expect(res.status).toBe(400)
@@ -54,6 +73,21 @@ describe('POST /api/workouts', () => {
     expect(res.status).toBe(400)
     const body = (await res.json()) as { error: string }
     expect(typeof body.error).toBe('string')
+  })
+})
+
+describe('GET /api/workouts', () => {
+  it('新しい順に、日付と id だけを返す', async () => {
+    await post('/api/workouts', { performedOn: '2026-09-13' })
+    await post('/api/workouts', { performedOn: '2026-09-20' })
+
+    const res = await exports.default.fetch(`${BASE}/api/workouts`)
+    expect(res.status).toBe(200)
+
+    const rows = (await res.json()) as Record<string, unknown>[]
+    expect(rows.map((r) => r.performedOn)).toEqual(['2026-09-20', '2026-09-13'])
+    // カレンダーは日付しか使わないので、セット数は返さない
+    expect(Object.keys(rows[0] ?? {}).sort()).toEqual(['id', 'performedOn'])
   })
 })
 

@@ -63,5 +63,6 @@ export function renderWithRouter(ui: ReactElement) {
 
   // キャスト不要。RouterProvider は TRouter extends AnyRouter のジェネリックなので、
   // Register に登録した本番 router 以外も推論で受け取れる。
-  return renderWithQuery(<RouterProvider router={router} />)
+  // router も返す。遷移先の :workoutId まで見たいテストが pathname を読めるようにするため。
+  return { router, ...renderWithQuery(<RouterProvider router={router} />) }
 }

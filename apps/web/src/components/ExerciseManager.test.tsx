@@ -6,7 +6,7 @@ import { ExerciseManager } from './ExerciseManager'
 
 /**
  * 一覧に見えている種目名。
- * リンクは <span>部位</span><span>名前</span><span>N セット</span> の形。
+ * リンクは <span>部位</span><span>名前</span> の形。
  * 絞り込み後は0件もありうるので、特定の名前を待たない作りにしてある。
  */
 function visibleNames() {
@@ -28,6 +28,13 @@ describe('ExerciseManager', () => {
     expect(within(legs).getByText('スクワット')).toBeInTheDocument()
   })
 
+  it('一覧にセット数は出さない（並び順にだけ使う）', async () => {
+    renderWithRouter(<ExerciseManager />)
+    await screen.findByText('ベンチプレス')
+
+    expect(screen.queryByText(/セット$/)).toBeNull()
+  })
+
   it('編集・削除ボタンを一覧には置かない（詳細画面に集約）', async () => {
     renderWithRouter(<ExerciseManager />)
     await screen.findByText('ベンチプレス')
@@ -41,11 +48,30 @@ describe('ExerciseManager', () => {
       renderWithRouter(<ExerciseManager />)
       await screen.findByText('ベンチプレス')
 
+      // 「その他」は分割にも部位にもあるので、fieldset で絞ってから探す
+      const group = screen.getByRole('group', { name: '分割' })
       for (const label of ['Push', 'Pull', 'Legs', 'その他']) {
         expect(
-          screen.getByRole('checkbox', { name: label }),
+          within(group).getByRole('checkbox', { name: label }),
         ).toBeInTheDocument()
       }
+    })
+
+    it('部位に「腹」は無く、ふくらはぎは「カーフ」', async () => {
+      renderWithRouter(<ExerciseManager />)
+      await screen.findByText('ベンチプレス')
+
+      const group = screen.getByRole('group', { name: '部位' })
+      expect(
+        within(group).getByRole('checkbox', { name: 'カーフ' }),
+      ).toBeInTheDocument()
+      expect(
+        within(group).getByRole('checkbox', { name: 'その他' }),
+      ).toBeInTheDocument()
+      expect(within(group).queryByRole('checkbox', { name: '腹' })).toBeNull()
+      expect(
+        within(group).queryByRole('checkbox', { name: 'ふくらはぎ' }),
+      ).toBeNull()
     })
 
     it('分割のチェックで即座に絞り込む', async () => {

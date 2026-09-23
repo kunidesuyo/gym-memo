@@ -1,13 +1,19 @@
 import { sql } from 'drizzle-orm'
-import { index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
+import {
+  index,
+  integer,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from 'drizzle-orm/sqlite-core'
 import { v7 as uuidv7 } from 'uuid'
 
 /**
  * 主キーは UUIDv7。
  *
  * v4 ではなく v7 を選んだ理由は「先頭が時刻なので辞書順 = 生成順」になること。
- * 既存クエリが id をタイブレーカーに使っている（同日に複数セッションがある場合の
- * 並び順、同一 setOrder の並び順）ため、ランダム ID だとそこが壊れる。
+ * 既存クエリが id をタイブレーカーに使っている（同一 setOrder の並び順、
+ * 同日付のワークアウトの並び順）ため、ランダム ID だとそこが壊れる。
  *
  * 発行は API 側（この $defaultFn）。クライアント発行に変えればオフライン対応や
  * 楽観的更新の仮 ID 撤廃に繋がるが、今はサーバーで採番する。
@@ -34,13 +40,24 @@ export const exercises = sqliteTable('exercises', {
   createdAt: text('created_at').notNull().default(sql`(current_timestamp)`),
 })
 
-/** 1回のトレーニングセッション。 */
-export const workouts = sqliteTable('workouts', {
-  id: id(),
-  // 日付のみ (YYYY-MM-DD)。同じ日に複数セッションを作ることは許す。
-  performedOn: text('performed_on').notNull(),
-  createdAt: text('created_at').notNull().default(sql`(current_timestamp)`),
-})
+/**
+ * 1回のトレーニングセッション。
+ *
+ * **1日1セッション**。performed_on に UNIQUE 索引を張って DB で保証する。
+ * 分割（Push / Pull / Legs）は1日1つしかやらないので、同じ日に複数作れると
+ * 「今日の記録」がどれなのか決まらず、ホームの「今日のセッションを始める」も
+ * 分岐できなくなる。API 側でも重複は 409 で弾くが、最後の砦はこの索引。
+ */
+export const workouts = sqliteTable(
+  'workouts',
+  {
+    id: id(),
+    /** 日付のみ (YYYY-MM-DD)。 */
+    performedOn: text('performed_on').notNull(),
+    createdAt: text('created_at').notNull().default(sql`(current_timestamp)`),
+  },
+  (t) => [uniqueIndex('workouts_performed_on_unique').on(t.performedOn)],
+)
 
 /**
  * 1セットの記録。このアプリの主役テーブル。
