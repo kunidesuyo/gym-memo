@@ -154,3 +154,52 @@ describe('onError（未捕捉の例外）', () => {
     expect(body.error).not.toMatch(/FOREIGN KEY|SQLITE|constraint/i)
   })
 })
+
+describe('メインセット', () => {
+  it('記録時の既定は false', async () => {
+    const { a } = await threeSets()
+    expect(a.isMainSet).toBe(false)
+  })
+
+  it('記録時に true で立てられる', async () => {
+    const db = testDb()
+    const w = await createWorkout(db, '2026-09-21')
+    const row = await addSet(db, w.id, {
+      exerciseId: benchId,
+      weightKg: 70,
+      reps: 5,
+      isMainSet: true,
+    })
+    expect(row.isMainSet).toBe(true)
+  })
+
+  it('PATCH で立てたり外したりできる', async () => {
+    const { a } = await threeSets()
+
+    const on = await send('PATCH', `/api/sets/${a.id}`, {
+      weightKg: 60,
+      reps: 10,
+      isMainSet: true,
+    })
+    await expect(on.json()).resolves.toMatchObject({ isMainSet: true })
+
+    // isMainSet を省いたら false に戻る（Zod の default が効く）
+    const off = await send('PATCH', `/api/sets/${a.id}`, {
+      weightKg: 60,
+      reps: 10,
+    })
+    await expect(off.json()).resolves.toMatchObject({ isMainSet: false })
+  })
+
+  it('セッション詳細の各セットに isMainSet が乗る', async () => {
+    const { workout, b } = await threeSets()
+    await send('PATCH', `/api/sets/${b.id}`, {
+      weightKg: 65,
+      reps: 8,
+      isMainSet: true,
+    })
+
+    const detail = await getWorkout(testDb(), workout.id)
+    expect(detail?.sets.map((s) => s.isMainSet)).toEqual([false, true, false])
+  })
+})

@@ -207,6 +207,7 @@ export function useAddSet(workoutId: string) {
           weightKg: input.weightKg,
           reps: input.reps,
           isSuccessful: input.isSuccessful,
+          isMainSet: input.isMainSet,
           note: input.note ?? null,
         }
         return { ...old, sets: [...old.sets, optimistic] }
@@ -258,6 +259,7 @@ export function useUpdateSet(workoutId: string) {
                       weightKg: input.weightKg,
                       reps: input.reps,
                       isSuccessful: input.isSuccessful,
+                      isMainSet: input.isMainSet,
                       note: input.note ?? null,
                     }
                   : s,

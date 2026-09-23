@@ -15,6 +15,7 @@ export function SetRow({
     reps: number
     note: string
     isSuccessful: boolean
+    isMainSet: boolean
   }) => Promise<unknown>
   onDelete: () => void
   isPending: boolean
@@ -30,6 +31,7 @@ export function SetRow({
             reps: String(set.reps),
             note: set.note ?? '',
             isSuccessful: set.isSuccessful,
+            isMainSet: set.isMainSet,
           }}
           submitLabel="更新する"
           isPending={isPending}
@@ -44,7 +46,13 @@ export function SetRow({
   }
 
   return (
-    <li className="flex items-center gap-2 py-1 text-sm">
+    // メインセットはそのまま、ウォームアップは落とす。
+    // バッジを足すより、本番だけが浮き上がるほうがスマホ幅で読みやすい。
+    <li
+      className={`flex items-center gap-2 py-1 text-sm ${
+        set.isMainSet ? '' : 'text-muted-foreground'
+      }`}
+    >
       <span className="w-5 shrink-0 text-muted-foreground tabular-nums">
         {set.setOrder}.
       </span>

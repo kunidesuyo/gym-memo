@@ -11,6 +11,7 @@ export type SetFormValues = {
   reps: string
   note: string
   isSuccessful: boolean
+  isMainSet: boolean
 }
 
 /**
@@ -32,6 +33,7 @@ export function SetForm({
     reps: number
     note: string
     isSuccessful: boolean
+    isMainSet: boolean
   }) => Promise<unknown>
   isPending: boolean
   /** 編集時の初期値。省略すると空のフォーム（新規追加）になる。 */
@@ -47,6 +49,7 @@ export function SetForm({
       reps: '',
       note: '',
       isSuccessful: true,
+      isMainSet: false,
     },
     validators: { onSubmit: setFormSchema },
     onSubmit: async ({ value, formApi }) => {
@@ -57,6 +60,8 @@ export function SetForm({
         formApi.setFieldValue('reps', '')
         formApi.setFieldValue('note', '')
         formApi.setFieldValue('isSuccessful', true)
+        // isMainSet は残す。本番セットは続けて何本か組むので、
+        // 毎回チェックし直させるほうが手数が増える。
       }
     },
   })
@@ -107,7 +112,11 @@ export function SetForm({
       </form.Field>
 
       <form.Field name="isSuccessful">
-        {(field) => <FailedField field={field} />}
+        {(field) => <CheckField field={field} label="挙がった" />}
+      </form.Field>
+
+      <form.Field name="isMainSet">
+        {(field) => <CheckField field={field} label="メインセット" />}
       </form.Field>
 
       <div className="mt-5 flex gap-2">
@@ -128,18 +137,25 @@ export function SetForm({
   )
 }
 
-/** 挙がらなかったセットを記録するためのチェックボックス。 */
-function FailedField({
+/**
+ * boolean 1つぶんのチェックボックス。
+ *
+ * ⚠️ ラベルは値と同じ向きにすること。以前ここは `isSuccessful` の値を
+ * 「失敗」というラベルで出しており、成功しているのにチェックが入って見えていた。
+ */
+function CheckField({
   field,
+  label,
 }: {
   field: {
     name: string
     state: { value: boolean }
     handleChange(v: boolean): void
   }
+  label: string
 }) {
   const uid = useId()
-  const id = `${uid}-failed`
+  const id = `${uid}-${field.name}`
   return (
     <Field orientation="horizontal" className="mt-5 w-auto gap-1.5">
       <Checkbox
@@ -148,7 +164,7 @@ function FailedField({
         onCheckedChange={(checked) => field.handleChange(checked === true)}
       />
       <FieldLabel htmlFor={id} className="cursor-pointer font-normal text-sm">
-        失敗
+        {label}
       </FieldLabel>
     </Field>
   )

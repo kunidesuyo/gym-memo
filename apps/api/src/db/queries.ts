@@ -114,6 +114,7 @@ export async function getWorkout(db: Db, id: string) {
       weightG: sets.weightG,
       reps: sets.reps,
       isSuccessful: sets.isSuccessful,
+      isMainSet: sets.isMainSet,
       note: sets.note,
     })
     .from(sets)
@@ -136,6 +137,7 @@ export async function addSet(
     weightKg: number
     reps: number
     isSuccessful?: boolean
+    isMainSet?: boolean
     note?: string | null
   },
 ) {
@@ -155,6 +157,7 @@ export async function addSet(
       weightG: toG(input.weightKg),
       reps: input.reps,
       isSuccessful: input.isSuccessful ?? true,
+      isMainSet: input.isMainSet ?? false,
       note: input.note ?? null,
     })
     .returning()
@@ -199,6 +202,7 @@ export async function getLastSets(
       weightG: sets.weightG,
       reps: sets.reps,
       isSuccessful: sets.isSuccessful,
+      isMainSet: sets.isMainSet,
       note: sets.note,
     })
     .from(sets)
@@ -223,6 +227,7 @@ export async function updateSet(
     weightKg: number
     reps: number
     isSuccessful?: boolean
+    isMainSet?: boolean
     note?: string | null
   },
 ) {
@@ -232,6 +237,7 @@ export async function updateSet(
       weightG: toG(input.weightKg),
       reps: input.reps,
       isSuccessful: input.isSuccessful ?? true,
+      isMainSet: input.isMainSet ?? false,
       note: input.note ?? null,
     })
     .where(eq(sets.id, id))
@@ -306,6 +312,7 @@ export async function getExerciseHistory(
       weightG: sets.weightG,
       reps: sets.reps,
       isSuccessful: sets.isSuccessful,
+      isMainSet: sets.isMainSet,
       note: sets.note,
     })
     .from(sets)

@@ -26,6 +26,12 @@ const setFields = {
    * 否定形（failed）だと二重否定が生まれて読みにくいので肯定形で持つ。
    */
   isSuccessful: z.boolean().default(true),
+  /**
+   * 本番セットかどうか。ウォームアップと分けて伸びを追うため。
+   * 既定は false。メインかどうかはセッション終盤にならないと決まらないので、
+   * 記録の初期状態はオフにしておき、画面で立てる。
+   */
+  isMainSet: z.boolean().default(false),
   note: z.string().trim().max(200, 'メモが長すぎます').nullish(),
 }
 
@@ -63,6 +69,7 @@ export const setFormSchema = z
   .object({
     note: z.string().trim().max(200, 'メモが長すぎます'),
     isSuccessful: z.boolean(),
+    isMainSet: z.boolean(),
     weightKg: z
       .string()
       .min(1, '重量を入力してください')

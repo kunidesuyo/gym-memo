@@ -74,6 +74,10 @@ export const workouts = sqliteTable(
  *
  * isSuccessful は挙がったかどうか。false = 重量に挑戦して0回だった記録。
  * 否定形（failed）だと二重否定が生まれて読みにくいので肯定形で持つ。
+ *
+ * isMainSet は本番セットかどうか。ウォームアップと分けて伸びを追うため。
+ * 記録時は既定 false で、画面のチェックボックスで立てる。
+ * 「ラスト3」で自動判定はしない（移行データの初期値を決めるのに使っただけ）。
  */
 export const sets = sqliteTable(
   'sets',
@@ -91,6 +95,9 @@ export const sets = sqliteTable(
     isSuccessful: integer('is_successful', { mode: 'boolean' })
       .notNull()
       .default(true),
+    isMainSet: integer('is_main_set', { mode: 'boolean' })
+      .notNull()
+      .default(false),
     note: text('note'),
     createdAt: text('created_at').notNull().default(sql`(current_timestamp)`),
   },

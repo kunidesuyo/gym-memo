@@ -132,6 +132,32 @@ describe('WorkoutDetail', () => {
     )
   })
 
+  it('メインセットはそのまま、ウォームアップは薄く出す', async () => {
+    withExistingSets()
+    renderWithRouter(<WorkoutDetail workoutId={WORKOUT_ID} />)
+
+    // フィクスチャは 60kg がウォームアップ / 65kg がメインセット
+    const warmup = (await (await todaySection()).findByText('60kg')).closest(
+      'li',
+    )
+    const main = (await todaySection()).getByText('65kg').closest('li')
+
+    expect(warmup).toHaveClass('text-muted-foreground')
+    expect(main).not.toHaveClass('text-muted-foreground')
+  })
+
+  it('編集フォームにメインセットの状態が入る', async () => {
+    withExistingSets()
+    const user = userEvent.setup()
+    renderWithRouter(<WorkoutDetail workoutId={WORKOUT_ID} />)
+
+    const row = (await (await todaySection()).findByText('65kg')).closest('li')
+    if (!row) throw new Error('行が見つかりません')
+    await user.click(within(row).getByRole('button', { name: '編集' }))
+
+    expect(screen.getByRole('checkbox', { name: 'メインセット' })).toBeChecked()
+  })
+
   it('セットを編集できる', async () => {
     withExistingSets()
     const user = userEvent.setup()
