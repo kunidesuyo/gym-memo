@@ -29,14 +29,17 @@
     "run_worker_first": ["/api/*"]
   },
 
-  // database_id はローカル開発では実在しなくてよい。
-  // Cloudflare アカウント作成後（フェーズ2）に本物の ID へ差し替える。
+  // database_id は本番 D1（APAC リージョン）のもの。秘密ではないのでコミットしてよい
+  // （これ単体では何もできず、アクセスにはアカウントの認証情報が要る）。
+  // ローカル開発では参照されず、.wrangler 配下の SQLite が使われる。
+  // ⚠️ binding は DB のまま。wrangler d1 create は gym_memo を提案してくるが、
+  //    変えるとコード側の c.env.DB が全部壊れる。
   // migrations_dir を省くと wrangler はリポジトリ直下の ./migrations を探して失敗する。
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "gym-memo",
-      "database_id": "local-placeholder",
+      "database_id": "a009e578-dc32-401a-94b4-f27282209cdc",
       "migrations_dir": "apps/api/migrations"
     }
   ]
