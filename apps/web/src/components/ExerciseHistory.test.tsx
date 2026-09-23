@@ -37,6 +37,25 @@ describe('ExerciseHistory', () => {
     expect(s.getByText('65kg')).toBeInTheDocument()
   })
 
+  // ⚠️ 薄くする規則は SetLine に集約してある。以前は画面ごとに書いていたため
+  //    セッション詳細だけ薄く、この画面は本番と同じ濃さで出ていた。
+  it('メインセットはそのまま、ウォームアップは薄く出す', async () => {
+    renderWithRouter(<ExerciseHistory exerciseId={BENCH_ID} />)
+
+    const heading = await screen.findByText('2026-09-13')
+    const section = heading.closest('section')
+    if (!section) throw new Error('セクションが見つかりません')
+
+    const s = within(section)
+    // フィクスチャは 60kg がウォームアップ / 65kg がメインセット
+    expect(s.getByText('60kg').closest('li')).toHaveClass(
+      'text-muted-foreground',
+    )
+    expect(s.getByText('65kg').closest('li')).not.toHaveClass(
+      'text-muted-foreground',
+    )
+  })
+
   it('日付からセッション詳細へ移動できる', async () => {
     renderWithRouter(<ExerciseHistory exerciseId={BENCH_ID} />)
 

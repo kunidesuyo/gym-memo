@@ -19,6 +19,7 @@ import {
   useUpdateExercise,
 } from '../api/hooks'
 import { ExerciseForm } from './ExerciseForm'
+import { SetLine } from './SetLine'
 
 /** 種目の詳細。記録の一覧と、この種目自体の編集・削除を担う。 */
 export function ExerciseHistory({ exerciseId }: { exerciseId: string }) {
@@ -134,28 +135,7 @@ export function ExerciseHistory({ exerciseId }: { exerciseId: string }) {
               </h2>
               <ul>
                 {s.sets.map((set) => (
-                  <li
-                    key={set.id}
-                    className="flex gap-2 py-0.5 text-sm tabular-nums"
-                  >
-                    <span className="w-5 text-muted-foreground">
-                      {set.setOrder}.
-                    </span>
-                    <span className="font-medium">{set.weightKg}kg</span>
-                    {set.isSuccessful ? (
-                      <>
-                        <span className="text-muted-foreground">×</span>
-                        <span>{set.reps}回</span>
-                      </>
-                    ) : (
-                      <span className="font-medium text-destructive">失敗</span>
-                    )}
-                    {set.note && (
-                      <span className="truncate text-muted-foreground text-xs">
-                        {set.note}
-                      </span>
-                    )}
-                  </li>
+                  <SetLine key={set.id} set={set} />
                 ))}
               </ul>
             </section>

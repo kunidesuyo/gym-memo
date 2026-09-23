@@ -74,6 +74,22 @@ describe('WorkoutDetail', () => {
     expect(screen.getByText('60kg')).toBeInTheDocument()
   })
 
+  // ⚠️ 薄くする規則は SetLine に集約してある。以前は画面ごとに書いていたため
+  //    「今日の記録」だけ薄く、この「前回の記録」は本番と同じ濃さで出ていた。
+  it('前回の記録でもウォームアップを薄く出す', async () => {
+    renderWithRouter(<WorkoutDetail workoutId={WORKOUT_ID} />)
+    await selectBenchPress()
+
+    // 「今日の記録」には同じ重量が無いので、画面全体から引いてよい
+    // （フィクスチャは 60kg がウォームアップ / 65kg がメインセット）
+    expect((await screen.findByText('60kg')).closest('li')).toHaveClass(
+      'text-muted-foreground',
+    )
+    expect(screen.getByText('65kg').closest('li')).not.toHaveClass(
+      'text-muted-foreground',
+    )
+  })
+
   it('記録したセットが「今日の記録」に種目ごとに並ぶ', async () => {
     renderWithRouter(<WorkoutDetail workoutId={WORKOUT_ID} />)
     const user = await selectBenchPress()

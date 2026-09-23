@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import type { WorkoutSet } from '../api/hooks'
 import { SetForm } from './SetForm'
+import { SetLine } from './SetLine'
 
 export function SetRow({
   set,
@@ -46,48 +47,29 @@ export function SetRow({
   }
 
   return (
-    // メインセットはそのまま、ウォームアップは落とす。
-    // バッジを足すより、本番だけが浮き上がるほうがスマホ幅で読みやすい。
-    <li
-      className={`flex items-center gap-2 py-1 text-sm ${
-        set.isMainSet ? '' : 'text-muted-foreground'
-      }`}
-    >
-      <span className="w-5 shrink-0 text-muted-foreground tabular-nums">
-        {set.setOrder}.
-      </span>
-      <span className="font-medium tabular-nums">{set.weightKg}kg</span>
-      {set.isSuccessful ? (
+    <SetLine
+      set={set}
+      trailing={
         <>
-          <span className="text-muted-foreground">×</span>
-          <span className="tabular-nums">{set.reps}回</span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="xs"
+            onClick={() => setEditing(true)}
+          >
+            編集
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="xs"
+            onClick={onDelete}
+            className="text-destructive"
+          >
+            削除
+          </Button>
         </>
-      ) : (
-        <span className="font-medium text-destructive">失敗</span>
-      )}
-      {set.note && (
-        <span className="truncate text-muted-foreground text-xs">
-          {set.note}
-        </span>
-      )}
-      <span className="flex-1" />
-      <Button
-        type="button"
-        variant="ghost"
-        size="xs"
-        onClick={() => setEditing(true)}
-      >
-        編集
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="xs"
-        onClick={onDelete}
-        className="text-destructive"
-      >
-        削除
-      </Button>
-    </li>
+      }
+    />
   )
 }

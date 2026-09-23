@@ -118,13 +118,15 @@ export const historyFixture: ExerciseHistory = {
       workoutId: '01a0bf19-0000-7000-8000-000000000009',
       performedOn: '2026-09-13',
       sets: [
+        // 60kg がウォームアップ / 65kg がメインセット。
+        // 他のフィクスチャ（workoutWithSetsFixture / lastSetsFixture）と揃えてある。
         {
           id: 'h2',
           setOrder: 1,
           weightKg: 60,
           reps: 10,
           isSuccessful: true,
-          isMainSet: true,
+          isMainSet: false,
           note: 'シート3段目',
         },
         {
@@ -145,14 +147,15 @@ export const lastSetsFixture: LastSetsResult = {
   workoutId: '01a0bf19-0000-7000-8000-000000000009',
   performedOn: '2026-09-13',
   sets: [
+    // 60kg がウォームアップ / 65kg がメインセット。
     {
       id: 's1',
       setOrder: 1,
       weightKg: 60,
       reps: 10,
       isSuccessful: true,
-      isMainSet: true,
-      note: null,
+      isMainSet: false,
+      note: 'ウォームアップ',
     },
     {
       id: 's2',
@@ -161,7 +164,7 @@ export const lastSetsFixture: LastSetsResult = {
       reps: 8,
       isSuccessful: true,
       isMainSet: true,
-      note: 'ウォームアップ',
+      note: null,
     },
   ],
 }
