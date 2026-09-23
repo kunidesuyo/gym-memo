@@ -91,7 +91,9 @@ function classify(text: string): Classified {
   const grip = GRIP_NOTES[text]
   if (grip) return { kind: 'gripNote', text: grip }
 
-  if (NOTE_PATTERNS.some((p) => p.test(text))) return { kind: 'note', text }
+  // 「デクライン4:」→「デクライン4」。末尾のコロンは区切りであって中身ではない。
+  if (NOTE_PATTERNS.some((p) => p.test(text)))
+    return { kind: 'note', text: text.replace(/:$/, '') }
 
   const alias = EXERCISE_ALIASES[text]
   if (alias) return { kind: 'exercise', name: alias }
@@ -105,6 +107,7 @@ type Row = {
   weightKg: number
   reps: number
   isSuccessful: boolean
+  isMainSet: boolean
   note: string | null
 }
 
@@ -128,6 +131,35 @@ function insertStatements(head: string, values: string[]): string[] {
 }
 
 const q = (s: string) => `'${s.replace(/'/g, "''")}'`
+
+/**
+ * メインセット（本番セット）を決める。ユーザーと確定した規則:
+ *
+ *   (日付, 種目) ごとの **ラスト3セット** ∪ **reps<=1 のセット**
+ *
+ * ラスト3は実データ989グループの95%以上で狙い通りだった。
+ * reps<=1 は 1RM 測定日のシングルで、ウォームアップの奥にも現れるので
+ * ラスト3では拾えない。失敗（reps 0）も max 挑戦なので含める。
+ *
+ * メインセット内で重量が変わることはある（アップ→本番の階段の途中でも構わない）。
+ * 重量による補正はかけない。
+ */
+function markMainSets(rows: Row[]) {
+  const byGroup = new Map<string, Row[]>()
+  for (const r of rows) {
+    const key = `${r.date} ${r.exercise}`
+    const g = byGroup.get(key)
+    if (g) g.push(r)
+    else byGroup.set(key, [r])
+  }
+
+  for (const g of byGroup.values()) {
+    for (const [i, r] of g.entries()) r.isMainSet = i >= g.length - 3
+  }
+  for (const r of rows) {
+    if (r.reps <= 1) r.isMainSet = true
+  }
+}
 
 /** 種目名から分割と部位を割り当てる。ユーザーと確定した規則。 */
 function assignCategory(name: string): [string, string] {
@@ -173,51 +205,67 @@ function main() {
       const raw = (line[col] ?? '').trim()
       if (!raw) continue
 
-      // 列ヘッダは「枠」。セル内に別の種目名が出てきたら乗り換える。
-      let exercise = header[col] ?? ''
-      const stickyNotes: string[] = []
+      // セル内の改行は「別ブロック」。種目の乗り換えは行をまたがない。
+      // （`パラレルmag ...\n-18×10 -14×10` を潰すと、後半の懸垂まで
+      //   ラットプルダウン扱いになる）
+      for (const line of raw.split(/\n+/)) {
+        // 列ヘッダは「枠」。行内に別の種目名が出てきたら乗り換える。
+        let exercise = header[col] ?? ''
+        // 設定メモ（デクラインの段数、マシン番号など）は、書き直されるまで効き続ける。
+        // 積み上げずに**上書き**する。`デクライン4:10 デクライン3:10×2` のように
+        // 同じ設定の別の値が続くことがあり、繋ぐと「デクライン4 / デクライン3」になる。
+        let stickyNote: string | null = null
 
-      const normalized = normalizeCell(raw)
-      const fixed = CELL_FIXES[normalized] ?? normalized
-      const tokens = expandGroups(fixed).split(/\s+/).filter(Boolean)
+        const normalized = normalizeCell(line)
+        if (!normalized) continue
+        const fixed = CELL_FIXES[normalized] ?? normalized
+        const tokens = expandGroups(fixed).split(/\s+/).filter(Boolean)
 
-      // 回数欠落トークン（`77.5×`）は**セル末尾に連続するものだけ**失敗扱い。
-      // 途中に出てくるものは `×1` の書きかけとみなす。
-      let trailingFailFrom = tokens.length
-      for (let i = tokens.length - 1; i >= 0; i--) {
-        const { spec } = splitToken(tokens[i] ?? '')
-        if (spec && isIncomplete(spec)) trailingFailFrom = i
-        else break
-      }
-
-      for (const [index, token] of tokens.entries()) {
-        const { text, spec } = splitToken(token)
-        let tokenNote: string | null = null
-        let skipThis = false
-
-        if (text) {
-          const c = classify(text)
-          if (c.kind === 'exercise') exercise = c.name
-          else if (c.kind === 'note') stickyNotes.push(c.text)
-          else if (c.kind === 'gripNote') tokenNote = c.text
-          else if (c.kind === 'skip') {
-            skipThis = true
-            skipped.set(text, (skipped.get(text) ?? 0) + 1)
-          } else unknown.set(text, (unknown.get(text) ?? 0) + 1)
+        // 回数欠落トークン（`77.5×`）は**行末に連続するものだけ**失敗扱い。
+        // 途中に出てくるものは `×1` の書きかけとみなす。
+        let trailingFailFrom = tokens.length
+        for (let i = tokens.length - 1; i >= 0; i--) {
+          const { spec } = splitToken(tokens[i] ?? '')
+          if (spec && isIncomplete(spec)) trailingFailFrom = i
+          else break
         }
 
-        if (skipThis || !spec) continue
+        for (const [index, token] of tokens.entries()) {
+          const { text, spec } = splitToken(token)
+          let tokenNote: string | null = null
+          let skipThis = false
 
-        const notes = [...stickyNotes]
-        if (tokenNote) notes.push(tokenNote)
-        const note = notes.join(' / ') || null
+          if (text) {
+            const c = classify(text)
+            if (c.kind === 'exercise') exercise = c.name
+            else if (c.kind === 'note') stickyNote = c.text
+            // グリップ指定は**そのトークンだけ**。`パ-18×10 -18×10` の2本目は
+            // パラレルグリップではない（書いてある所にだけ効く）。
+            else if (c.kind === 'gripNote') tokenNote = c.text
+            else if (c.kind === 'skip') {
+              skipThis = true
+              skipped.set(text, (skipped.get(text) ?? 0) + 1)
+            } else unknown.set(text, (unknown.get(text) ?? 0) + 1)
+          }
 
-        for (const s of parseSpec(spec, exercise, index >= trailingFailFrom)) {
-          out.push({ date, exercise, ...s, note })
+          if (skipThis || !spec) continue
+
+          const note =
+            [stickyNote, tokenNote].filter(Boolean).join(' / ') || null
+
+          for (const s of parseSpec(
+            spec,
+            exercise,
+            index >= trailingFailFrom,
+          )) {
+            out.push({ date, exercise, ...s, isMainSet: false, note })
+          }
         }
       }
     }
   }
+
+  markMainSets(out)
 
   const names = [...new Set(out.map((r) => r.exercise))].sort()
   const exerciseIds = new Map(names.map((n) => [n, uuidv7()]))
@@ -250,7 +298,7 @@ function main() {
     ),
     '',
     ...insertStatements(
-      'INSERT INTO sets (id, workout_id, exercise_id, set_order, weight_g, reps, is_successful, note) VALUES',
+      'INSERT INTO sets (id, workout_id, exercise_id, set_order, weight_g, reps, is_successful, is_main_set, note) VALUES',
       out.map((r) => {
         const key = `${r.date} ${r.exercise}`
         const order = (orderCounter.get(key) ?? 0) + 1
@@ -258,7 +306,9 @@ function main() {
         const note = r.note === null ? 'NULL' : q(r.note)
         return `  (${q(uuidv7())}, ${q(workoutIds.get(r.date) ?? '')}, ${q(
           exerciseIds.get(r.exercise) ?? '',
-        )}, ${order}, ${toG(r.weightKg)}, ${r.reps}, ${r.isSuccessful ? 1 : 0}, ${note})`
+        )}, ${order}, ${toG(r.weightKg)}, ${r.reps}, ${r.isSuccessful ? 1 : 0}, ${
+          r.isMainSet ? 1 : 0
+        }, ${note})`
       }),
     ),
   ]
@@ -271,6 +321,7 @@ function main() {
   console.log(`  セット     ${out.length}`)
   console.log(`  うち失敗   ${out.filter((r) => !r.isSuccessful).length}`)
   console.log(`  うち補助   ${out.filter((r) => r.weightKg < 0).length}`)
+  console.log(`  メイン     ${out.filter((r) => r.isMainSet).length}`)
   console.log(`  note 付き  ${out.filter((r) => r.note).length}`)
 
   if (skipped.size) {

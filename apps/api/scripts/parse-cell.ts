@@ -62,10 +62,14 @@ export function splitToken(token: string): { text: string; spec: string } {
   if (withNum)
     return { text: (withNum[1] ?? '').trim(), spec: (withNum[2] ?? '').trim() }
 
-  // 素の数値（`65` `67.5❌`）もここで拾う
+  // 素の数値（`65` `67.5❌`）もここで拾う。
+  // 前置テキストは **`4:` のように `:` で終わるものだけ**許す。
+  // `デクライン3` の `3` は腹筋台の段数であって重量ではない。
+  // 何でも許すと「テキスト＋数字」の設定メモが丸ごと1セットに化ける。
   const bare = token.match(new RegExp(`^(.*?)(${NUM}\\s*(?:kg)?❌?)$`, 'i'))
-  if (bare)
-    return { text: (bare[1] ?? '').trim(), spec: (bare[2] ?? '').trim() }
+  const prefix = bare?.[1] ?? ''
+  if (bare && (prefix === '' || prefix.endsWith(':')))
+    return { text: prefix.trim(), spec: (bare[2] ?? '').trim() }
 
   return { text: token.trim(), spec: '' }
 }
@@ -96,11 +100,20 @@ export function parseSpec(
     // 素の数値 = その重量で1回（1RM 測定日のシングル）
     const bare = token.match(BARE)
     if (bare) {
-      const w = Number(bare[1])
+      const n = Number(bare[1])
+      // 自重種目に「重量だけ」は書かれない。`デクライン4:10` の 10 は回数。
+      if (BODYWEIGHT.has(exercise)) {
+        out.push(
+          explicitFail
+            ? { weightKg: 0, reps: 0, isSuccessful: false }
+            : { weightKg: 0, reps: n, isSuccessful: true },
+        )
+        continue
+      }
       out.push(
         explicitFail
-          ? { weightKg: w, reps: 0, isSuccessful: false }
-          : { weightKg: w, reps: 1, isSuccessful: true },
+          ? { weightKg: n, reps: 0, isSuccessful: false }
+          : { weightKg: n, reps: 1, isSuccessful: true },
       )
       continue
     }
