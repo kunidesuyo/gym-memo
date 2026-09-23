@@ -72,77 +72,85 @@ export function SetForm({
         e.preventDefault()
         form.handleSubmit()
       }}
-      className="flex flex-wrap items-start gap-2"
+      // 3行に固める。折り返しに任せると画面幅で並びが変わり、
+      // ジムで見たときに毎回どこを押すか探すことになる。
+      //   1行目 重量・回数 / 2行目 チェックボックス / 3行目 メモ
+      className="flex flex-col gap-3"
     >
-      <form.Field name="weightKg">
-        {(field) => (
-          <div className="flex items-start gap-1">
-            {/*
-              ⚠️ iOS の数値キーパッド（inputMode="decimal" / "numeric"）には
-                 マイナスキーが無く、負数を打てない。懸垂のアシスト量を負数で
-                 持つ設計なので、符号はボタンで反転させる。
-                 inputMode を外して通常キーボードにする案は、数字を打つのに
-                 毎回レイヤ切り替えが要るので採らない。
-              入力欄の**左**に置くのは、表示される順序（-18）と操作の順序を
-              揃えるため。
-            */}
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              className="mt-5"
-              aria-label="重量の符号を反転"
-              onClick={() => field.handleChange(toggleSign(field.state.value))}
-            >
-              ±
-            </Button>
+      <div className="flex items-start gap-2">
+        <form.Field name="weightKg">
+          {(field) => (
+            <div className="flex items-start gap-1">
+              {/*
+                ⚠️ iOS の数値キーパッド（inputMode="decimal" / "numeric"）には
+                   マイナスキーが無く、負数を打てない。懸垂のアシスト量を負数で
+                   持つ設計なので、符号はボタンで反転させる。
+                   inputMode を外して通常キーボードにする案は、数字を打つのに
+                   毎回レイヤ切り替えが要るので採らない。
+                入力欄の**左**に置くのは、表示される順序（-18）と操作の順序を
+                揃えるため。
+              */}
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="mt-5"
+                aria-label="重量の符号を反転"
+                onClick={() =>
+                  field.handleChange(toggleSign(field.state.value))
+                }
+              >
+                ±
+              </Button>
+              <TextField
+                label="重量 (kg)"
+                field={field}
+                inputMode="decimal"
+                placeholder="60"
+                className="w-20"
+                inputClassName="tabular-nums"
+              />
+            </div>
+          )}
+        </form.Field>
+
+        <form.Field name="reps">
+          {(field) => (
             <TextField
-              label="重量 (kg)"
+              label="回数"
               field={field}
-              inputMode="decimal"
-              placeholder="60"
+              inputMode="numeric"
+              placeholder="10"
               className="w-20"
               inputClassName="tabular-nums"
             />
-          </div>
-        )}
-      </form.Field>
+          )}
+        </form.Field>
+      </div>
 
-      <form.Field name="reps">
-        {(field) => (
-          <TextField
-            label="回数"
-            field={field}
-            inputMode="numeric"
-            placeholder="10"
-            className="w-20"
-            inputClassName="tabular-nums"
-          />
-        )}
-      </form.Field>
+      <div className="flex items-center gap-4">
+        <form.Field name="isSuccessful">
+          {(field) => <CheckField field={field} label="成功" />}
+        </form.Field>
 
-      <form.Field name="isSuccessful">
-        {(field) => <CheckField field={field} label="成功" />}
-      </form.Field>
+        <form.Field name="isMainSet">
+          {(field) => <CheckField field={field} label="メインセット" />}
+        </form.Field>
+      </div>
 
-      <form.Field name="isMainSet">
-        {(field) => <CheckField field={field} label="メインセット" />}
-      </form.Field>
-
-      {/* 任意項目なので一番後ろ。flex-1 で余白を取るため、
-          スマホ幅では折り返して1行を占める。 */}
+      {/* 任意項目なので一番後ろ。 */}
       <form.Field name="note">
         {(field) => (
           <TextField
             label="メモ（任意）"
             field={field}
             placeholder="シート3段目 / 最後きつい"
-            className="min-w-40 flex-1"
+            className="w-full"
           />
         )}
       </form.Field>
 
-      <div className="mt-5 flex gap-2">
+      <div className="flex gap-2">
         <form.Subscribe selector={(s) => s.isSubmitting}>
           {(isSubmitting) => (
             <Button type="submit" disabled={isSubmitting || isPending}>
@@ -189,7 +197,7 @@ function CheckField({
   const uid = useId()
   const id = `${uid}-${field.name}`
   return (
-    <Field orientation="horizontal" className="mt-5 w-auto gap-1.5">
+    <Field orientation="horizontal" className="w-auto gap-1.5">
       <Checkbox
         id={id}
         checked={field.state.value}
