@@ -160,6 +160,8 @@ script が呼ばれない（`ERR_PNPM_NOTHING_TO_DEPLOY`）。**`pnpm run deploy
 ⚠️ **`database_id` を変えるとローカル D1 が見えなくなる。** `.wrangler` 配下の
 SQLite ファイル名はこの ID から導出されている。変えたら `tmp/import.sql` から入れ直す。
 
+**改修を本番に反映する手順は `docs/design-notes.md` 30章**（機能変更のみ /
+マイグレーション / データ変換を伴う場合 / R2 など新リソースを足す場合の4ケース）。
 Terraform の使い方・境界線・Access の中身は `infra/README.md` と 5章・29章。
 
 バックログ（画像アップロード/R2、グラフ、PR、オフライン対応 など）は `docs/design-notes.md` 15章。
