@@ -77,20 +77,14 @@ export function SetForm({
       <form.Field name="weightKg">
         {(field) => (
           <div className="flex items-start gap-1">
-            <TextField
-              label="重量 (kg)"
-              field={field}
-              inputMode="decimal"
-              placeholder="60"
-              className="w-20"
-              inputClassName="tabular-nums"
-            />
             {/*
               ⚠️ iOS の数値キーパッド（inputMode="decimal" / "numeric"）には
                  マイナスキーが無く、負数を打てない。懸垂のアシスト量を負数で
                  持つ設計なので、符号はボタンで反転させる。
                  inputMode を外して通常キーボードにする案は、数字を打つのに
                  毎回レイヤ切り替えが要るので採らない。
+              入力欄の**左**に置くのは、表示される順序（-18）と操作の順序を
+              揃えるため。
             */}
             <Button
               type="button"
@@ -102,6 +96,14 @@ export function SetForm({
             >
               ±
             </Button>
+            <TextField
+              label="重量 (kg)"
+              field={field}
+              inputMode="decimal"
+              placeholder="60"
+              className="w-20"
+              inputClassName="tabular-nums"
+            />
           </div>
         )}
       </form.Field>
