@@ -20,6 +20,7 @@ import {
   normalizeMag,
   SKIP_PATTERNS,
 } from './classify.ts'
+import { markMainSets } from './main-sets.ts'
 import {
   expandGroups,
   isIncomplete,
@@ -131,35 +132,6 @@ function insertStatements(head: string, values: string[]): string[] {
 }
 
 const q = (s: string) => `'${s.replace(/'/g, "''")}'`
-
-/**
- * メインセット（本番セット）を決める。ユーザーと確定した規則:
- *
- *   (日付, 種目) ごとの **ラスト3セット** ∪ **reps<=1 のセット**
- *
- * ラスト3は実データ989グループの95%以上で狙い通りだった。
- * reps<=1 は 1RM 測定日のシングルで、ウォームアップの奥にも現れるので
- * ラスト3では拾えない。失敗（reps 0）も max 挑戦なので含める。
- *
- * メインセット内で重量が変わることはある（アップ→本番の階段の途中でも構わない）。
- * 重量による補正はかけない。
- */
-function markMainSets(rows: Row[]) {
-  const byGroup = new Map<string, Row[]>()
-  for (const r of rows) {
-    const key = `${r.date} ${r.exercise}`
-    const g = byGroup.get(key)
-    if (g) g.push(r)
-    else byGroup.set(key, [r])
-  }
-
-  for (const g of byGroup.values()) {
-    for (const [i, r] of g.entries()) r.isMainSet = i >= g.length - 3
-  }
-  for (const r of rows) {
-    if (r.reps <= 1) r.isMainSet = true
-  }
-}
 
 /** 種目名から分割と部位を割り当てる。ユーザーと確定した規則。 */
 function assignCategory(name: string): [string, string] {

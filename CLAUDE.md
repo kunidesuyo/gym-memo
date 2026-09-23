@@ -103,7 +103,9 @@ UTC なので JST では午前9時より前が前日になる。ローカル時�
   （-36kg → -18kg の減少がそのまま上達の記録になる）。`nonnegative()` に戻さないこと
 - **`sets.isSuccessful`** は挙がったかどうか。false のときだけ `reps` 0 を許す（Zod の refine）
 - **`sets.isMainSet`** は本番セットかどうか。**既定 false**、画面のチェックボックスで立てる。
-  「ラスト3」の自動判定はしない（移行データの初期値を決めるのに使っただけ。28章）
+  「ラスト3」の自動判定はしない（移行データの初期値を決めるのに使っただけ。28章）。
+  ⚠️ **懸垂だけは5回が本番・10回がアップ**。ただし「10回は常にアップ」は成り立たない
+  （130日中125日は10回しかやっておらず、その日は10回が本番）
 - **boolean は否定形にせず、`is` / `has` / `can` を接頭辞に付ける**。
   `failed` のような否定形は二重否定が生まれて読みにくい
 - **ネイティブ `<select>` を使っている**。スマホでは OS のピッカーが開くほうが UX が良い（20章）
@@ -124,6 +126,8 @@ UTC なので JST では午前9時より前が前日になる。ローカル時�
 ## 環境の癖
 
 - **TypeScript 7 は `baseUrl` を廃止**。`paths` だけで `@/` を張る
+- **`apps/api/scripts/` の相対 import には `.ts` を付ける**。`node --experimental-strip-types`
+  で直接実行するため。tsc 側は `allowImportingTsExtensions` で通している（`--noEmit` なので安全）
 - **Biome の対象外**: `components/ui/`（shadcn 生成物）、`routeTree.gen.ts`、`src/index.css`（Tailwind v4 構文を CSS パーサが読めない）、`worker-configuration.d.ts`
 - **`worker-configuration.d.ts` はコミットする**。生成物だが、無いと clone 直後の typecheck が落ちる
 - `wrangler dev` を止めたつもりで `workerd` が残っていることがある。API の挙動が実装と食い違ったら
