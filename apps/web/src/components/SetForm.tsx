@@ -121,6 +121,16 @@ export function SetForm({
         )}
       </form.Field>
 
+      <form.Field name="isSuccessful">
+        {(field) => <CheckField field={field} label="成功" />}
+      </form.Field>
+
+      <form.Field name="isMainSet">
+        {(field) => <CheckField field={field} label="メインセット" />}
+      </form.Field>
+
+      {/* 任意項目なので一番後ろ。flex-1 で余白を取るため、
+          スマホ幅では折り返して1行を占める。 */}
       <form.Field name="note">
         {(field) => (
           <TextField
@@ -130,14 +140,6 @@ export function SetForm({
             className="min-w-40 flex-1"
           />
         )}
-      </form.Field>
-
-      <form.Field name="isSuccessful">
-        {(field) => <CheckField field={field} label="成功" />}
-      </form.Field>
-
-      <form.Field name="isMainSet">
-        {(field) => <CheckField field={field} label="メインセット" />}
       </form.Field>
 
       <div className="mt-5 flex gap-2">
