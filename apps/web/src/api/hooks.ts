@@ -204,7 +204,7 @@ export function useAddSet(workoutId: string) {
           setOrder: sameExercise.length + 1,
           weightKg: input.weightKg,
           reps: input.reps,
-          failed: input.failed,
+          isSuccessful: input.isSuccessful,
           note: input.note ?? null,
         }
         return { ...old, sets: [...old.sets, optimistic] }
@@ -256,7 +256,7 @@ export function useUpdateSet(workoutId: string) {
                       ...s,
                       weightKg: input.weightKg,
                       reps: input.reps,
-                      failed: input.failed,
+                      isSuccessful: input.isSuccessful,
                       note: input.note ?? null,
                     }
                   : s,

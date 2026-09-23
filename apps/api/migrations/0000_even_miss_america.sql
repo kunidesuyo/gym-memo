@@ -14,6 +14,7 @@ CREATE TABLE `sets` (
 	`set_order` integer NOT NULL,
 	`weight_kg` real NOT NULL,
 	`reps` integer NOT NULL,
+	`is_successful` integer DEFAULT true NOT NULL,
 	`note` text,
 	`created_at` text DEFAULT (current_timestamp) NOT NULL,
 	FOREIGN KEY (`workout_id`) REFERENCES `workouts`(`id`) ON UPDATE no action ON DELETE cascade,

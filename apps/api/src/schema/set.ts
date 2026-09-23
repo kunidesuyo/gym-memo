@@ -15,19 +15,23 @@ const setFields = {
     .number('数値で入力してください')
     .min(-500, '補助が大きすぎます')
     .max(1000, '重量が大きすぎます'),
-  /** 失敗時は 0 を許す。成功時に1以上であることは下の refine で保証する。 */
+  /** 失敗（isSuccessful=false）のときだけ 0 を許す。保証は下の refine で。 */
   reps: z
     .number('数値で入力してください')
     .int('回数は整数で指定してください')
     .nonnegative('回数は0以上で指定してください')
     .max(1000, '回数が大きすぎます'),
-  /** 挙がらなかったセット。重量に挑戦して0回だった記録を残せる。 */
-  failed: z.boolean().default(false),
+  /**
+   * 挙がったかどうか。false = 重量に挑戦して0回だった記録。
+   * 否定形（failed）だと二重否定が生まれて読みにくいので肯定形で持つ。
+   */
+  isSuccessful: z.boolean().default(true),
   note: z.string().trim().max(200, 'メモが長すぎます').nullish(),
 }
 
 /** 成功したセットは必ず1回以上挙がっているはず。 */
-const repsOk = (v: { failed: boolean; reps: number }) => v.failed || v.reps >= 1
+const repsOk = (v: { isSuccessful: boolean; reps: number }) =>
+  v.isSuccessful ? v.reps >= 1 : true
 const repsError = {
   message: '成功したセットは回数を1以上にしてください',
   path: ['reps'],
@@ -58,7 +62,7 @@ export const updateSetSchema = setInputSchema
 export const setFormSchema = z
   .object({
     note: z.string().trim().max(200, 'メモが長すぎます'),
-    failed: z.boolean(),
+    isSuccessful: z.boolean(),
     weightKg: z
       .string()
       .min(1, '重量を入力してください')

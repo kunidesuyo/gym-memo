@@ -118,18 +118,18 @@ describe('POST /api/workouts/:id/sets', () => {
       exerciseId: benchId,
       weightKg: 85,
       reps: 0,
-      failed: true,
+      isSuccessful: false,
     })
 
     expect(res.status).toBe(201)
     await expect(res.json()).resolves.toMatchObject({
       weightKg: 85,
       reps: 0,
-      failed: true,
+      isSuccessful: false,
     })
   })
 
-  it('失敗フラグ無しで回数0は 400', async () => {
+  it('成功のまま回数0は 400', async () => {
     const created = await post('/api/workouts', { performedOn: '2026-09-20' })
     const { id } = (await created.json()) as { id: string }
 

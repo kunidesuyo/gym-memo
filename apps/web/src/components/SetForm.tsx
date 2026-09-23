@@ -10,7 +10,7 @@ export type SetFormValues = {
   weightKg: string
   reps: string
   note: string
-  failed: boolean
+  isSuccessful: boolean
 }
 
 /**
@@ -31,7 +31,7 @@ export function SetForm({
     weightKg: number
     reps: number
     note: string
-    failed: boolean
+    isSuccessful: boolean
   }) => Promise<unknown>
   isPending: boolean
   /** 編集時の初期値。省略すると空のフォーム（新規追加）になる。 */
@@ -46,7 +46,7 @@ export function SetForm({
       weightKg: '',
       reps: '',
       note: '',
-      failed: false,
+      isSuccessful: true,
     },
     validators: { onSubmit: setFormSchema },
     onSubmit: async ({ value, formApi }) => {
@@ -56,7 +56,7 @@ export function SetForm({
         // 同じ重量で複数セット組むので、重量は残して回数とメモだけ消す
         formApi.setFieldValue('reps', '')
         formApi.setFieldValue('note', '')
-        formApi.setFieldValue('failed', false)
+        formApi.setFieldValue('isSuccessful', true)
       }
     },
   })
@@ -106,7 +106,7 @@ export function SetForm({
         )}
       </form.Field>
 
-      <form.Field name="failed">
+      <form.Field name="isSuccessful">
         {(field) => <FailedField field={field} />}
       </form.Field>
 

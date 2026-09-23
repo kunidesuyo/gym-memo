@@ -97,7 +97,7 @@ export async function getWorkout(db: Db, id: string) {
       setOrder: sets.setOrder,
       weightKg: sets.weightKg,
       reps: sets.reps,
-      failed: sets.failed,
+      isSuccessful: sets.isSuccessful,
       note: sets.note,
     })
     .from(sets)
@@ -119,7 +119,7 @@ export async function addSet(
     exerciseId: string
     weightKg: number
     reps: number
-    failed?: boolean
+    isSuccessful?: boolean
     note?: string | null
   },
 ) {
@@ -138,7 +138,7 @@ export async function addSet(
       setOrder: (agg?.maxOrder ?? 0) + 1,
       weightKg: input.weightKg,
       reps: input.reps,
-      failed: input.failed ?? false,
+      isSuccessful: input.isSuccessful ?? true,
       note: input.note ?? null,
     })
     .returning()
@@ -182,7 +182,7 @@ export async function getLastSets(
       setOrder: sets.setOrder,
       weightKg: sets.weightKg,
       reps: sets.reps,
-      failed: sets.failed,
+      isSuccessful: sets.isSuccessful,
       note: sets.note,
     })
     .from(sets)
@@ -205,7 +205,7 @@ export async function updateSet(
   input: {
     weightKg: number
     reps: number
-    failed?: boolean
+    isSuccessful?: boolean
     note?: string | null
   },
 ) {
@@ -214,7 +214,7 @@ export async function updateSet(
     .set({
       weightKg: input.weightKg,
       reps: input.reps,
-      failed: input.failed ?? false,
+      isSuccessful: input.isSuccessful ?? true,
       note: input.note ?? null,
     })
     .where(eq(sets.id, id))
@@ -288,7 +288,7 @@ export async function getExerciseHistory(
       setOrder: sets.setOrder,
       weightKg: sets.weightKg,
       reps: sets.reps,
-      failed: sets.failed,
+      isSuccessful: sets.isSuccessful,
       note: sets.note,
     })
     .from(sets)

@@ -55,7 +55,8 @@ export const workouts = sqliteTable('workouts', {
  * weight_kg は**負数を許す**。懸垂のアシストマシンを使ったときの補助量を
  * マイナスで表すため（-36kg → -18kg という減少がそのまま上達の記録になる）。
  *
- * failed は「挙がらなかった」セット。重量に挑戦して0回だった記録を残せる。
+ * isSuccessful は挙がったかどうか。false = 重量に挑戦して0回だった記録。
+ * 否定形（failed）だと二重否定が生まれて読みにくいので肯定形で持つ。
  */
 export const sets = sqliteTable(
   'sets',
@@ -70,7 +71,9 @@ export const sets = sqliteTable(
     setOrder: integer('set_order').notNull(),
     weightKg: real('weight_kg').notNull(),
     reps: integer('reps').notNull(),
-    failed: integer('failed', { mode: 'boolean' }).notNull().default(false),
+    isSuccessful: integer('is_successful', { mode: 'boolean' })
+      .notNull()
+      .default(true),
     note: text('note'),
     createdAt: text('created_at').notNull().default(sql`(current_timestamp)`),
   },

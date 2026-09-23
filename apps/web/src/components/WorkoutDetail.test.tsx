@@ -268,7 +268,7 @@ describe('WorkoutDetail', () => {
               id: 'failed-set',
               weightKg: 85,
               reps: 0,
-              failed: true,
+              isSuccessful: false,
             },
           ],
         }),

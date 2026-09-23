@@ -91,8 +91,9 @@ web が型解決するのはこのファイルだけ（`api/routes` として ex
 - **主キーは UUIDv7**。v4 ではない。`id` をソートのタイブレーカーに使っているため（17章）
 - **`sets.weightKg` は負数を許す**。懸垂のアシスト量をマイナスで表す
   （-36kg → -18kg の減少がそのまま上達の記録になる）。`nonnegative()` に戻さないこと
-- **`sets.failed`** は「挙がらなかった」セット。`failed` が true のときだけ `reps` 0 を許す
-  （Zod の refine で保証）
+- **`sets.isSuccessful`** は挙がったかどうか。false のときだけ `reps` 0 を許す（Zod の refine）
+- **boolean は否定形にせず、`is` / `has` / `can` を接頭辞に付ける**。
+  `failed` のような否定形は二重否定が生まれて読みにくい
 - **ネイティブ `<select>` を使っている**。スマホでは OS のピッカーが開くほうが UX が良い（20章）
 - **shadcn の `form` コンポーネントは入れない**。中身が react-hook-form で TanStack Form と競合する（20章）
 - **種目の絞り込みはクライアント側**。API を叩かない（21章）

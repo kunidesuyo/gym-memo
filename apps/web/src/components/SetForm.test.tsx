@@ -45,7 +45,7 @@ describe('SetForm', () => {
       weightKg: 62.5,
       reps: 8,
       note: '',
-      failed: false,
+      isSuccessful: true,
     })
   })
 
@@ -63,7 +63,7 @@ describe('SetForm', () => {
       weightKg: 60,
       reps: 10,
       note: 'シート3段目',
-      failed: false,
+      isSuccessful: true,
     })
   })
 
@@ -86,7 +86,12 @@ describe('SetForm', () => {
     const onSubmit = vi.fn().mockResolvedValue(undefined)
     render(
       <SetForm
-        initial={{ weightKg: '60', reps: '10', note: 'メモ', failed: false }}
+        initial={{
+          weightKg: '60',
+          reps: '10',
+          note: 'メモ',
+          isSuccessful: true,
+        }}
         submitLabel="更新する"
         onCancel={() => {}}
         onSubmit={onSubmit}
@@ -103,7 +108,7 @@ describe('SetForm', () => {
       weightKg: 60,
       reps: 10,
       note: 'メモ',
-      failed: false,
+      isSuccessful: true,
     })
     // 編集フォームなので値は残る
     expect(screen.getByLabelText('回数')).toHaveValue('10')
@@ -123,7 +128,7 @@ describe('SetForm', () => {
       weightKg: 85,
       reps: 0,
       note: '',
-      failed: true,
+      isSuccessful: false,
     })
   })
 
@@ -155,7 +160,7 @@ describe('SetForm', () => {
       weightKg: -18,
       reps: 10,
       note: '',
-      failed: false,
+      isSuccessful: true,
     })
   })
 })

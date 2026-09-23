@@ -1,1 +1,0 @@
-ALTER TABLE `sets` ADD `failed` integer DEFAULT false NOT NULL;

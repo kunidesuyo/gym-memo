@@ -78,11 +78,14 @@ describe('PATCH /api/sets/:id', () => {
     const res = await send('PATCH', `/api/sets/${a.id}`, {
       weightKg: 85,
       reps: 0,
-      failed: true,
+      isSuccessful: false,
     })
 
     expect(res.status).toBe(200)
-    await expect(res.json()).resolves.toMatchObject({ reps: 0, failed: true })
+    await expect(res.json()).resolves.toMatchObject({
+      reps: 0,
+      isSuccessful: false,
+    })
   })
 
   it('存在しない ID は 404', async () => {
