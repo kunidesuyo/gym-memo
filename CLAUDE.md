@@ -135,14 +135,27 @@ UTC なので JST では午前9時より前が前日になる。ローカル時�
 
 ## 現在地
 
-**フェーズ1 と MVP は完了**（テスト132本）。**フェーズ2 = Cloudflare へのデプロイ**に着手中。
+**フェーズ1 / MVP / フェーズ2 まで完了**（テスト143本）。
+**本番稼働中: https://gym-memo.kuni-app.dev**（Cloudflare Access で自分のみ）。
 
-デプロイ前の安全設定は済んでいる（`workers_dev: false` / `observability` / `onError`）。
-残りは**アカウント作成・ドメイン取得・D1 作成・Terraform で Access**で、
-いずれも対話的な操作が要るためユーザーの手元で行う。
+```
+Worker gym-memo  ← wrangler run deploy
+D1 gym-memo (APAC / a009e578-…)  種目51 / セッション267 / セット4190
+Access アプリ + ポリシー, ゾーンの TLS 設定  ← infra/ (Terraform)
+```
 
-⚠️ **`workers_dev: false` を外さないこと。** 外して `wrangler deploy` すると
-`gym-memo.<subdomain>.workers.dev` が生え、Access を張るまで無認証で公開される。
+⚠️ **`workers_dev: false` / `preview_urls: false` を外さないこと。** 外すと
+`gym-memo.<subdomain>.workers.dev` が生える。これは **Access の対象外の別ホスト名**
+なので、保護を迂回する無認証の裏口になる。
+
+⚠️ **`pnpm deploy` は動かない。** pnpm の組み込みコマンドと名前が衝突していて
+script が呼ばれない（`ERR_PNPM_NOTHING_TO_DEPLOY`）。**`pnpm run deploy`** と書く。
+`deploy:dry` は組み込みに無いので素通りする、という非対称さに注意。
+
+⚠️ **`database_id` を変えるとローカル D1 が見えなくなる。** `.wrangler` 配下の
+SQLite ファイル名はこの ID から導出されている。変えたら `tmp/import.sql` から入れ直す。
+
+Terraform の使い方・境界線・Access の中身は `infra/README.md` と 5章・29章。
 
 バックログ（画像アップロード/R2、グラフ、PR、オフライン対応 など）は `docs/design-notes.md` 15章。
 
