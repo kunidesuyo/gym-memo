@@ -4,7 +4,9 @@ import { delay, HttpResponse, http } from 'msw'
 import { describe, expect, it } from 'vitest'
 import {
   BENCH_ID,
+  copiedSetsFixture,
   WORKOUT_ID,
+  workoutFixture,
   workoutWithSetsFixture,
 } from '../../test/msw/handlers'
 import { server } from '../../test/msw/server'
@@ -72,6 +74,69 @@ describe('WorkoutDetail', () => {
 
     expect(await screen.findByText('2026-09-13')).toBeInTheDocument()
     expect(screen.getByText('60kg')).toBeInTheDocument()
+  })
+
+  describe('前回の記録をまとめて記録する', () => {
+    it('押すと前回のセットが今日の記録に入る', async () => {
+      // サーバーが作るので、コピー後は GET が返す内容が変わる。
+      // 楽観的更新をしていないぶん、再取得が効いているかがそのまま見える。
+      let copied = false
+      server.use(
+        http.post('/api/workouts/:id/sets/copy-last', async () => {
+          copied = true
+          await delay(50)
+          return HttpResponse.json(copiedSetsFixture, { status: 201 })
+        }),
+        http.get('/api/workouts/:id', () =>
+          HttpResponse.json(copied ? workoutWithSetsFixture : workoutFixture),
+        ),
+      )
+
+      renderWithRouter(<WorkoutDetail workoutId={WORKOUT_ID} />)
+      const user = await selectBenchPress()
+
+      expect(
+        (await todaySection()).getByText('まだ記録がありません'),
+      ).toBeInTheDocument()
+
+      await user.click(screen.getByRole('button', { name: 'まとめて記録' }))
+
+      const today = await todaySection()
+      expect(await today.findByText('60kg')).toBeInTheDocument()
+      expect(today.getByText('65kg')).toBeInTheDocument()
+    })
+
+    it('今日すでにその種目の記録があればボタンを出さない', async () => {
+      withExistingSets()
+      renderWithRouter(<WorkoutDetail workoutId={WORKOUT_ID} />)
+      await selectBenchPress()
+
+      // 前回の記録自体は出ている
+      expect(await screen.findByText('2026-09-13')).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'まとめて記録' })).toBeNull()
+    })
+
+    it('失敗したらエラーを出し、記録は増えない', async () => {
+      server.use(
+        http.post('/api/workouts/:id/sets/copy-last', () =>
+          HttpResponse.json(
+            { error: 'この種目は今日すでに記録があります' },
+            { status: 409 },
+          ),
+        ),
+      )
+
+      renderWithRouter(<WorkoutDetail workoutId={WORKOUT_ID} />)
+      const user = await selectBenchPress()
+      await user.click(screen.getByRole('button', { name: 'まとめて記録' }))
+
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        'この種目は今日すでに記録があります',
+      )
+      expect(
+        (await todaySection()).getByText('まだ記録がありません'),
+      ).toBeInTheDocument()
+    })
   })
 
   // ⚠️ 薄くする規則は SetLine に集約してある。以前は画面ごとに書いていたため

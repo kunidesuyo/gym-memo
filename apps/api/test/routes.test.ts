@@ -214,3 +214,145 @@ describe('GET /api/exercises/:id/last-sets', () => {
     })
   })
 })
+
+describe('POST /api/workouts/:id/sets/copy-last', () => {
+  /** 前回のセッションを作り、ベンチのセットを3本入れる。 */
+  async function seedPrevious() {
+    const prev = await post('/api/workouts', { performedOn: '2026-09-13' })
+    const prevId = ((await prev.json()) as { id: string }).id
+    await post(`/api/workouts/${prevId}/sets`, {
+      exerciseId: benchId,
+      weightKg: 60,
+      reps: 10,
+      isMainSet: false,
+      note: 'シート3段目',
+    })
+    await post(`/api/workouts/${prevId}/sets`, {
+      exerciseId: benchId,
+      weightKg: 65,
+      reps: 8,
+      isMainSet: true,
+    })
+    await post(`/api/workouts/${prevId}/sets`, {
+      exerciseId: benchId,
+      weightKg: 65,
+      reps: 6,
+      isSuccessful: false,
+      isMainSet: true,
+    })
+    return prevId
+  }
+
+  async function newToday() {
+    const today = await post('/api/workouts', { performedOn: '2026-09-20' })
+    return ((await today.json()) as { id: string }).id
+  }
+
+  it('前回のセットをそのまま複製して 201 を返す', async () => {
+    await seedPrevious()
+    const todayId = await newToday()
+
+    const res = await post(`/api/workouts/${todayId}/sets/copy-last`, {
+      exerciseId: benchId,
+    })
+    expect(res.status).toBe(201)
+
+    const rows = (await res.json()) as {
+      setOrder: number
+      weightKg: number
+      reps: number
+      isSuccessful: boolean
+      isMainSet: boolean
+      note: string | null
+    }[]
+
+    // 失敗したセットもメモもそのまま写す。setOrder は 1 から振り直す。
+    expect(rows).toMatchObject([
+      {
+        setOrder: 1,
+        weightKg: 60,
+        reps: 10,
+        isSuccessful: true,
+        isMainSet: false,
+        note: 'シート3段目',
+      },
+      {
+        setOrder: 2,
+        weightKg: 65,
+        reps: 8,
+        isSuccessful: true,
+        isMainSet: true,
+      },
+      {
+        setOrder: 3,
+        weightKg: 65,
+        reps: 6,
+        isSuccessful: false,
+        isMainSet: true,
+      },
+    ])
+  })
+
+  it('負数の重量が丸めで壊れない（懸垂のアシスト量）', async () => {
+    const prev = await post('/api/workouts', { performedOn: '2026-09-13' })
+    const prevId = ((await prev.json()) as { id: string }).id
+    await post(`/api/workouts/${prevId}/sets`, {
+      exerciseId: benchId,
+      weightKg: -18.5,
+      reps: 10,
+    })
+
+    const todayId = await newToday()
+    const res = await post(`/api/workouts/${todayId}/sets/copy-last`, {
+      exerciseId: benchId,
+    })
+
+    const rows = (await res.json()) as { weightKg: number }[]
+    expect(rows[0]?.weightKg).toBe(-18.5)
+  })
+
+  it('今日すでにその種目の記録があれば 409（押し間違いで倍にしない）', async () => {
+    await seedPrevious()
+    const todayId = await newToday()
+    await post(`/api/workouts/${todayId}/sets`, {
+      exerciseId: benchId,
+      weightKg: 60,
+      reps: 10,
+    })
+
+    const res = await post(`/api/workouts/${todayId}/sets/copy-last`, {
+      exerciseId: benchId,
+    })
+    expect(res.status).toBe(409)
+    await expect(res.json()).resolves.toMatchObject({
+      error: 'この種目は今日すでに記録があります',
+    })
+  })
+
+  it('前回の記録が無ければ 404', async () => {
+    const todayId = await newToday()
+    const res = await post(`/api/workouts/${todayId}/sets/copy-last`, {
+      exerciseId: benchId,
+    })
+    expect(res.status).toBe(404)
+    await expect(res.json()).resolves.toMatchObject({
+      error: 'この種目の前回の記録がありません',
+    })
+  })
+
+  it('存在しないセッションには 404', async () => {
+    await seedPrevious()
+    const res = await post(`/api/workouts/${MISSING_ID}/sets/copy-last`, {
+      exerciseId: benchId,
+    })
+    expect(res.status).toBe(404)
+  })
+
+  it('種目の ID が不正なら 400', async () => {
+    const todayId = await newToday()
+    const res = await post(`/api/workouts/${todayId}/sets/copy-last`, {
+      exerciseId: 'not-a-uuid',
+    })
+    expect(res.status).toBe(400)
+  })
+})

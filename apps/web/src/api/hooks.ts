@@ -231,6 +231,32 @@ export function useAddSet(workoutId: string) {
   })
 }
 
+/**
+ * 前回の記録を種目まるごと今日に複製する。
+ *
+ * 楽観的更新はしない。サーバーが何セット作るかは前回の記録次第で、
+ * 画面側が正しく予測できないため（予測を外すと一瞬おかしな行が出る）。
+ * セット単位の追加と違って連打する操作でもないので、応答を待ってよい。
+ */
+export function useCopyLastSets(workoutId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (exerciseId: string) => {
+      const res = await client.api.workouts[':id'].sets['copy-last'].$post({
+        param: { id: workoutId },
+        json: { exerciseId },
+      })
+      // 前回が無ければ 404、今日すでに記録があれば 409。文言はサーバーのものを使う
+      if (!res.ok)
+        throw await errorFrom(res, '前回の記録のコピーに失敗しました')
+      return res.json()
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: keys.workout(workoutId) })
+    },
+  })
+}
+
 export function useUpdateSet(workoutId: string) {
   const qc = useQueryClient()
 

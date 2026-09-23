@@ -5,6 +5,7 @@ import { Field, FieldLabel } from '@/components/ui/field'
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
 import {
   useAddSet,
+  useCopyLastSets,
   useDeleteSet,
   useDeleteWorkout,
   useExercises,
@@ -45,6 +46,7 @@ export function WorkoutDetail({ workoutId }: { workoutId: string }) {
   // 記録中のセッション自身を除外しないと、1セット入れた時点で「前回」が今日になる
   const lastSets = useLastSets(exerciseId, workoutId)
   const addSet = useAddSet(workoutId)
+  const copyLastSets = useCopyLastSets(workoutId)
   const updateSet = useUpdateSet(workoutId)
   const deleteSet = useDeleteSet(workoutId)
   const deleteWorkout = useDeleteWorkout()
@@ -58,7 +60,8 @@ export function WorkoutDetail({ workoutId }: { workoutId: string }) {
     )
 
   const groups = groupByExercise(workout.data?.sets ?? [])
-  const mutationError = addSet.error ?? updateSet.error ?? deleteSet.error
+  const mutationError =
+    addSet.error ?? copyLastSets.error ?? updateSet.error ?? deleteSet.error
 
   return (
     <div className="flex flex-col gap-4">
@@ -138,7 +141,20 @@ export function WorkoutDetail({ workoutId }: { workoutId: string }) {
 
       {exerciseId !== '' && (
         <>
-          <LastSets data={lastSets.data} isPending={lastSets.isPending} />
+          <LastSets
+            data={lastSets.data}
+            isPending={lastSets.isPending}
+            isCopyPending={copyLastSets.isPending}
+            // 今日すでに記録がある種目には足さない（サーバーも 409 で弾く）。
+            // ボタンを出したまま失敗させるより、出さないほうが分かりやすい。
+            canCopy={!groups.some((g) => g.exerciseId === exerciseId)}
+            onCopy={() => {
+              copyLastSets.mutateAsync(exerciseId).catch(() => {
+                // 失敗は下の mutationError として表示する。
+                // ここで握らないと未処理の Promise 拒否になる。
+              })
+            }}
+          />
           <SetForm
             resetAfterSubmit
             isPending={addSet.isPending}

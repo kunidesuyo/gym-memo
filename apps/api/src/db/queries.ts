@@ -167,6 +167,66 @@ export async function addSet(
 }
 
 /**
+ * 前回この種目をやったときのセットを、そのまま今日に複製する。
+ *
+ * ウォームアップの積み方は前回とほぼ同じになるので、丸ごと入れてから
+ * 違うところだけ直すほうが打鍵が少ない。
+ *
+ * ⚠️ **kg に直さずグラムのまま写す。** getLastSets 経由で kg を受け取って
+ *    入れ直すと、g → kg → g の往復で `Math.round` を1回余計に挟むことになる。
+ *
+ * 前回が無ければ null。呼び出し側が 404 にする。
+ * 今日すでにこの種目の記録がある場合は**呼ばない**（ルート側で 409 にしている）。
+ * setOrder を 1 から振り直すのはそれが前提。
+ */
+export async function copyLastSets(
+  db: Db,
+  workoutId: string,
+  exerciseId: string,
+) {
+  const [last] = await db
+    .select({ workoutId: workouts.id })
+    .from(sets)
+    .innerJoin(workouts, eq(sets.workoutId, workouts.id))
+    .where(and(eq(sets.exerciseId, exerciseId), ne(sets.workoutId, workoutId)))
+    .groupBy(workouts.id)
+    .orderBy(desc(workouts.performedOn), desc(workouts.id))
+    .limit(1)
+
+  if (!last) return null
+
+  const source = await db
+    .select()
+    .from(sets)
+    .where(
+      and(eq(sets.workoutId, last.workoutId), eq(sets.exerciseId, exerciseId)),
+    )
+    .orderBy(sets.setOrder, sets.id)
+
+  if (source.length === 0) return null
+
+  const rows = await db
+    .insert(sets)
+    .values(
+      source.map((s, i) => ({
+        workoutId,
+        exerciseId,
+        setOrder: i + 1,
+        weightG: s.weightG,
+        reps: s.reps,
+        // 失敗も含めてそのまま写す。「前回の記録のコピー」であることを
+        // 画面の表示と一致させるため。違えば画面で直す。
+        isSuccessful: s.isSuccessful,
+        isMainSet: s.isMainSet,
+        note: s.note,
+      })),
+    )
+    .returning()
+
+  return rows.map(withKg)
+}
+
+/**
  * 「前回この種目をやったときの全セット」——このアプリの存在理由。
  *
  * 記録中のセッションを excludeWorkoutId で除外できるようにしてある。

@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { createDb } from './db'
 import {
   addSet,
+  copyLastSets,
   countSetsForExercise,
   createExercise,
   createWorkout,
@@ -21,6 +22,7 @@ import {
 import { idParamSchema } from './schema/common'
 import { exerciseQuerySchema, newExerciseSchema } from './schema/exercise'
 import {
+  copyLastSetsSchema,
   lastSetsQuerySchema,
   newSetSchema,
   updateSetSchema,
@@ -162,6 +164,38 @@ export const routes = new Hono<{ Bindings: Env }>()
 
       const row = await addSet(db, id, input)
       return c.json(row, 201)
+    },
+  )
+
+  /**
+   * 前回の記録を種目まるごと今日に複製する。
+   *
+   * 1件ずつ POST を繰り返す実装にしない。ジムの電波で N 往復すると
+   * 途中で切れて「半分だけ入った」状態が生まれるため。
+   */
+  .post(
+    '/api/workouts/:id/sets/copy-last',
+    zValidator('param', idParamSchema),
+    zValidator('json', copyLastSetsSchema),
+    async (c) => {
+      const { id } = c.req.valid('param')
+      const { exerciseId } = c.req.valid('json')
+      const db = createDb(c.env.DB)
+
+      const workout = await getWorkout(db, id)
+      if (!workout) return c.json({ error: 'workout not found' }, 404)
+
+      // 今日すでにこの種目の記録があれば足さない。
+      // 押し間違いで倍になる事故のほうが、押し直せない不便より高くつく。
+      if (workout.sets.some((s) => s.exerciseId === exerciseId)) {
+        return c.json({ error: 'この種目は今日すでに記録があります' }, 409)
+      }
+
+      const rows = await copyLastSets(db, id, exerciseId)
+      if (!rows)
+        return c.json({ error: 'この種目の前回の記録がありません' }, 404)
+
+      return c.json(rows, 201)
     },
   )
 

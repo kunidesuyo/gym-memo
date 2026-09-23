@@ -98,3 +98,8 @@ export const setFormSchema = z
 export const lastSetsQuerySchema = z.object({
   excludeWorkoutId: z.uuid('セッションの ID が不正です').optional(),
 })
+
+/** 前回の記録を丸ごと今日に複製する。対象の種目だけを受け取る。 */
+export const copyLastSetsSchema = z.object({
+  exerciseId: z.uuid('種目の ID が不正です'),
+})

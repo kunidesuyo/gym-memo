@@ -169,6 +169,13 @@ export const lastSetsFixture: LastSetsResult = {
   ],
 }
 
+/**
+ * copy-last が返すセット。lastSetsFixture を今日に複製した結果にあたるので、
+ * workoutWithSetsFixture.sets と同じ内容にしてある
+ * （コピー後の GET が返すものと食い違わせない）。
+ */
+export const copiedSetsFixture = workoutWithSetsFixture.sets
+
 export const workoutsFixture: WorkoutSummary[] = [
   { id: '01a0bf20-0000-7000-8000-000000000010', performedOn: '2026-09-20' },
   { id: '01a0bf19-0000-7000-8000-000000000009', performedOn: '2026-09-13' },
@@ -256,6 +263,12 @@ export const handlers = [
     '/api/workouts/:id',
     () => new HttpResponse(null, { status: 204 }),
   ),
+
+  // 前回の記録をまとめて複製する。既定では lastSetsFixture と同じ内容を返す。
+  http.post('/api/workouts/:id/sets/copy-last', async () => {
+    await delay(50)
+    return HttpResponse.json(copiedSetsFixture, { status: 201 })
+  }),
 
   // 楽観的更新を観察できるよう、わざと応答を遅らせる
   http.post('/api/workouts/:id/sets', async ({ request }) => {
