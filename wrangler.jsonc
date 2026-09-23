@@ -6,12 +6,20 @@
   // 両方が受け付ける日付に合わせる（テスト側の上限が 2026-08-22 だった）。
   "compatibility_date": "2026-08-22",
 
-  // ⚠️ 無認証の公開 URL を作らせない。
+  // ⚠️ 無認証の公開 URL を作らせない。**外さないこと。**
   // 既定のままデプロイすると gym-memo.<subdomain>.workers.dev が自動で生え、
-  // 誰でも D1 を読み書きできてしまう。Cloudflare Access を張るまでは必ず false。
-  // 独自ドメインを取得したら routes に custom_domain を足す。
+  // 誰でも D1 を読み書きできてしまう。
+  // 下の routes は Access で保護済みだが、workers.dev は Access の対象外の
+  // 別ホスト名なので、生やすと保護を迂回する裏口になる。
   "workers_dev": false,
   "preview_urls": false,
+
+  // 公開ホスト名。custom_domain: true にすると wrangler が DNS レコードの作成と
+  // Worker への紐付けまでやる（DNS を Terraform で管理しないのはこのため）。
+  // このホスト名は Cloudflare Access の検問下にある（infra/main.tf）。
+  // ⚠️ 順序: Access を先に張ってからここを足すこと。逆だと保護が効くまでの間、
+  //    無認証で公開される窓が開く。
+  "routes": [{ "pattern": "gym-memo.kuni-app.dev", "custom_domain": true }],
 
   // logs と traces は別々に指定が必要。enabled だけではトレースは有効にならない。
   "observability": {
