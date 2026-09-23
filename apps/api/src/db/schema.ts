@@ -1,11 +1,5 @@
 import { sql } from 'drizzle-orm'
-import {
-  index,
-  integer,
-  real,
-  sqliteTable,
-  text,
-} from 'drizzle-orm/sqlite-core'
+import { index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 import { v7 as uuidv7 } from 'uuid'
 
 /**
@@ -52,7 +46,13 @@ export const workouts = sqliteTable('workouts', {
  * 1セットの記録。このアプリの主役テーブル。
  * 「前回この種目を何kgで何回やったか」を引くため exercise_id に索引を張る。
  *
- * weight_kg は**負数を許す**。懸垂のアシストマシンを使ったときの補助量を
+ * weight_g は**グラム単位の整数**で持つ。kg を REAL にすると 110.8 のような値が
+ * 2進で厳密に表現できず、集計のたびに「この比較は安全か」を考える羽目になる。
+ * 整数なら SUM(weight_g * reps) が厳密。JS の number は 2^53 まで整数が厳密で、
+ * このアプリの総ボリューム（約 2.5e9）に対して360万倍の余裕がある。
+ * API は kg で公開し、変換は db/weight.ts に閉じ込める。
+ *
+ * **負数を許す**。懸垂のアシストマシンを使ったときの補助量を
  * マイナスで表すため（-36kg → -18kg という減少がそのまま上達の記録になる）。
  *
  * isSuccessful は挙がったかどうか。false = 重量に挑戦して0回だった記録。
@@ -69,7 +69,7 @@ export const sets = sqliteTable(
       .notNull()
       .references(() => exercises.id),
     setOrder: integer('set_order').notNull(),
-    weightKg: real('weight_kg').notNull(),
+    weightG: integer('weight_g').notNull(),
     reps: integer('reps').notNull(),
     isSuccessful: integer('is_successful', { mode: 'boolean' })
       .notNull()

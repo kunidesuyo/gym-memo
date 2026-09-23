@@ -1,6 +1,14 @@
 import { and, count, desc, eq, inArray, ne, sql } from 'drizzle-orm'
 import type { NewExercise } from '../schema/exercise'
 import type { Db } from './index'
+import { toG, toKg } from './weight'
+
+/** DB の行（g）を API が返す形（kg）に直す。保存形式を外に漏らさないための境界。 */
+const withKg = <T extends { weightG: number }>({ weightG, ...rest }: T) => ({
+  ...rest,
+  weightKg: toKg(weightG),
+})
+
 import { exercises, sets, workouts } from './schema'
 
 /**
@@ -95,7 +103,7 @@ export async function getWorkout(db: Db, id: string) {
       exerciseId: sets.exerciseId,
       exerciseName: exercises.name,
       setOrder: sets.setOrder,
-      weightKg: sets.weightKg,
+      weightG: sets.weightG,
       reps: sets.reps,
       isSuccessful: sets.isSuccessful,
       note: sets.note,
@@ -105,7 +113,7 @@ export async function getWorkout(db: Db, id: string) {
     .where(eq(sets.workoutId, id))
     .orderBy(sets.exerciseId, sets.setOrder, sets.id)
 
-  return { ...workout, sets: rows }
+  return { ...workout, sets: rows.map(withKg) }
 }
 
 /**
@@ -136,7 +144,7 @@ export async function addSet(
       workoutId,
       exerciseId: input.exerciseId,
       setOrder: (agg?.maxOrder ?? 0) + 1,
-      weightKg: input.weightKg,
+      weightG: toG(input.weightKg),
       reps: input.reps,
       isSuccessful: input.isSuccessful ?? true,
       note: input.note ?? null,
@@ -144,7 +152,7 @@ export async function addSet(
     .returning()
 
   if (!row) throw new Error('set の作成に失敗しました')
-  return row
+  return withKg(row)
 }
 
 /**
@@ -180,7 +188,7 @@ export async function getLastSets(
     .select({
       id: sets.id,
       setOrder: sets.setOrder,
-      weightKg: sets.weightKg,
+      weightG: sets.weightG,
       reps: sets.reps,
       isSuccessful: sets.isSuccessful,
       note: sets.note,
@@ -191,10 +199,11 @@ export async function getLastSets(
     )
     .orderBy(sets.setOrder, sets.id)
 
-  return { ...last, sets: rows }
+  return { ...last, sets: rows.map(withKg) }
 }
 
-export async function getSet(db: Db, id: string) {
+/** 内部専用。**kg に直していない**行をそのまま返すので export しない。 */
+async function getSet(db: Db, id: string) {
   const [row] = await db.select().from(sets).where(eq(sets.id, id))
   return row ?? null
 }
@@ -212,14 +221,14 @@ export async function updateSet(
   const [row] = await db
     .update(sets)
     .set({
-      weightKg: input.weightKg,
+      weightG: toG(input.weightKg),
       reps: input.reps,
       isSuccessful: input.isSuccessful ?? true,
       note: input.note ?? null,
     })
     .where(eq(sets.id, id))
     .returning()
-  return row ?? null
+  return row ? withKg(row) : null
 }
 
 /**
@@ -286,7 +295,7 @@ export async function getExerciseHistory(
       id: sets.id,
       workoutId: sets.workoutId,
       setOrder: sets.setOrder,
-      weightKg: sets.weightKg,
+      weightG: sets.weightG,
       reps: sets.reps,
       isSuccessful: sets.isSuccessful,
       note: sets.note,
@@ -307,6 +316,6 @@ export async function getExerciseHistory(
     ...s,
     sets: rows
       .filter((r) => r.workoutId === s.workoutId)
-      .map(({ workoutId: _, ...rest }) => rest),
+      .map(({ workoutId: _, ...rest }) => withKg(rest)),
   }))
 }

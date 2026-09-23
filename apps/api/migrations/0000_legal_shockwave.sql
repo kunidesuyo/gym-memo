@@ -12,7 +12,7 @@ CREATE TABLE `sets` (
 	`workout_id` text NOT NULL,
 	`exercise_id` text NOT NULL,
 	`set_order` integer NOT NULL,
-	`weight_kg` real NOT NULL,
+	`weight_g` integer NOT NULL,
 	`reps` integer NOT NULL,
 	`is_successful` integer DEFAULT true NOT NULL,
 	`note` text,

@@ -108,6 +108,9 @@ type Row = {
   note: string | null
 }
 
+/** 重量は DB にグラム整数で入れる（src/db/weight.ts と同じ変換）。 */
+const toG = (kg: number) => Math.round(kg * 1000)
+
 const q = (s: string) => `'${s.replace(/'/g, "''")}'`
 
 /** 種目名から分割と部位を割り当てる。ユーザーと確定した規則。 */
@@ -230,7 +233,7 @@ function main() {
       .map((d) => `  (${q(workoutIds.get(d) ?? '')}, ${q(d)})`)
       .join(`,${LF}`)};`,
     '',
-    'INSERT INTO sets (id, workout_id, exercise_id, set_order, weight_kg, reps, is_successful, note) VALUES',
+    'INSERT INTO sets (id, workout_id, exercise_id, set_order, weight_g, reps, is_successful, note) VALUES',
     `${out
       .map((r) => {
         const key = `${r.date} ${r.exercise}`
@@ -239,7 +242,7 @@ function main() {
         const note = r.note === null ? 'NULL' : q(r.note)
         return `  (${q(uuidv7())}, ${q(workoutIds.get(r.date) ?? '')}, ${q(
           exerciseIds.get(r.exercise) ?? '',
-        )}, ${order}, ${r.weightKg}, ${r.reps}, ${r.isSuccessful ? 1 : 0}, ${note})`
+        )}, ${order}, ${toG(r.weightKg)}, ${r.reps}, ${r.isSuccessful ? 1 : 0}, ${note})`
       })
       .join(`,${LF}`)};`,
   ]
