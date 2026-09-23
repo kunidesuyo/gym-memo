@@ -8,13 +8,18 @@
  *   1. Access ポリシー    「誰を通すか」
  *   2. Access アプリ      「どのホスト名を守るか」＋ 1 の紐付け
  *
- * ⚠️ Zero Trust 組織（<team>.cloudflareaccess.com）は**意図的にここで管理しない**。
- *    ダッシュボードで作る。理由:
- *      - アカウントに1つだけの一度きりのセットアップで、設定差分が意味を持たない
- *      - terraform destroy で消せない（API 側に残る）
- *      - **terraform import に対応していない**ため、state を失うと管理下に戻せない
- *    復旧手段の無いリソースを state に入れるのは、IaC の利点を失ってリスクだけ負う。
- *    アカウント作成・ドメイン購入と同じ「手動の前提条件」に分類する。
+ * ⚠️ 判断基準: **ここは「このアプリに属するもの」だけを管理する。**
+ *    ドメインやアカウントに属するものは手動の前提条件に置く。
+ *
+ *    手動にしているもの（infra/README.md に値を記録）:
+ *      - Zero Trust 組織（<team>.cloudflareaccess.com）
+ *        アカウントに1つだけの一度きりの設定。destroy も import もできないため、
+ *        state を失うと管理下に戻す手段が無い。
+ *      - ゾーンの TLS 設定（min_tls_version / always_use_https）
+ *        効く範囲は kuni-app.dev 全体で、gym-memo とは無関係。ここに置くと
+ *        2つ目のアプリを作ったとき、2つの state が同じリソースを取り合う。
+ *
+ *    どちらも一度 Terraform で書いてから外した。経緯は docs/design-notes.md 29章。
  */
 
 terraform {
@@ -112,34 +117,6 @@ resource "cloudflare_zero_trust_access_application" "gym_memo" {
   # 盗まれたトークンの再利用と CSRF に対する上乗せ。自分専用なので副作用がない。
   enable_binding_cookie      = true
   http_only_cookie_attribute = true
-}
-
-/**
- * ゾーン設定。Access とは層が違う——Access が「誰を入れるか」、こちらは
- * 「どういう通信で繋ぐか」。互いに依存しない。
- *
- * v5 では設定1つにつきリソース1つ。既存の値を Terraform の管理下に取り込む形なので、
- * 初回の plan には create ではなく update（~）が出る。
- *
- * ⚠️ 実効性は限定的だと理解した上で入れている。.dev は HSTS プリロード済みで
- *    ブラウザが HTTPS を強制し、現代のブラウザは TLS 1.0/1.1 を使わない。
- *    「良くない設定を放置しない」という衛生上の理由。
- *    ssl=strict や HSTS ヘッダは Worker に origin が無く本当に無意味なので入れない。
- */
-
-resource "cloudflare_zone_setting" "min_tls_version" {
-  zone_id    = data.cloudflare_zone.main.zone_id
-  setting_id = "min_tls_version"
-  # 既定は 1.0。TLS 1.0 / 1.1 は非推奨で既知の弱点がある。
-  value = "1.2"
-}
-
-resource "cloudflare_zone_setting" "always_use_https" {
-  zone_id    = data.cloudflare_zone.main.zone_id
-  setting_id = "always_use_https"
-  # http:// で来たら 301 で https:// に飛ばす。
-  # ブラウザには HSTS プリロードが効くので、効くのは非ブラウザのクライアント。
-  value = "on"
 }
 
 output "auth_domain" {

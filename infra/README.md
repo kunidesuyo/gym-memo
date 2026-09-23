@@ -9,19 +9,43 @@
 |---|---|
 | `cloudflare_zero_trust_access_policy.owner_only` | 誰を通すか。メールアドレス1件のみ `allow` / 30日 |
 | `cloudflare_zero_trust_access_application.gym_memo` | どのホスト名を守るか。`gym-memo.kuni-app.dev` |
-| `cloudflare_zone_setting.min_tls_version` | TLS 1.2 以上 |
-| `cloudflare_zone_setting.always_use_https` | `http://` → 301 → `https://` |
 | `data.cloudflare_zone.main` | 既存ゾーンを**読むだけ**（作らない・消さない） |
+
+> **判断基準: ここは「このアプリに属するもの」だけを管理する。**
+> ドメインやアカウントに属するものは手動の前提条件に置く。
 
 ## ここで管理していないもの（意図的）
 
 - **Worker / アセット / D1 / DNS レコード** → Wrangler（`wrangler.jsonc`）
-- **Zero Trust 組織**（`kuni-app.cloudflareaccess.com`）→ **ダッシュボードで手動**
-  - `terraform destroy` で消せず、**`terraform import` にも対応していない**。
-    state を失うと管理下に戻す手段が無いため、state に入れない判断をした
-  - アカウント作成・ドメイン購入と同じ「手動の前提条件」に分類する
-- **IdP** → Zero Trust のオンボーディングが自動登録する（`type = cloudflare`）
 - **アプリのシークレット** → `wrangler secret put`。`terraform.tfstate` は平文 JSON
+- **IdP** → Zero Trust のオンボーディングが自動登録する（`type = cloudflare`）
+
+### 手動で設定してある前提条件
+
+⚠️ **作り直すときはこの値を再現すること。**どちらも一度 Terraform で書いてから外した
+（経緯は `docs/design-notes.md` 29章）。
+
+**Zero Trust 組織** — ダッシュボード（https://one.dash.cloudflare.com）
+
+| 項目 | 値 |
+|---|---|
+| Team domain | `kuni-app.cloudflareaccess.com` |
+
+`terraform destroy` で消せず、**`terraform import` にも対応していない**。
+state を失うと管理下に戻す手段が無いため、state に入れない。
+
+**ゾーンの TLS 設定** — ダッシュボード → `kuni-app.dev` → SSL/TLS → Edge Certificates
+
+| 項目 | 値 | 既定値 |
+|---|---|---|
+| Minimum TLS Version | **TLS 1.2** | 1.0（TLS 1.0/1.1 は非推奨） |
+| Always Use HTTPS | **On** | Off |
+
+効く範囲は `kuni-app.dev` **全体**で、gym-memo とは無関係。ここに置くと2つ目の
+アプリを作ったとき、2つの state が同じリソースを取り合う。
+
+なお `.dev` は TLD 全体が HSTS プリロード済みなので、ブラウザ相手には
+どちらもほぼ無意味（効くのは非ブラウザのクライアント）。衛生上の設定。
 
 ## 使い方
 

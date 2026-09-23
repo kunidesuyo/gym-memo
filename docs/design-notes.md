@@ -2621,7 +2621,7 @@ MVP を本番に載せ、Cloudflare Access で自分だけがアクセスでき�
 
 ```
 ブラウザ
-  │  ① TLS（min_tls_version 1.2 / http は 301 で https へ）   ← Terraform
+  │  ① TLS（min_tls_version 1.2 / http は 301 で https へ）   ← 手動
   ▼
 Cloudflare エッジ
   │  ② Access の検問（kunidesuyo1234@gmail.com のみ / 30日）    ← Terraform
@@ -2633,12 +2633,11 @@ Worker gym-memo                                              ← Wrangler
 
 | 対象 | 担当 | 実体 |
 |---|---|---|
-| ゾーン設定（TLS） | Terraform | `cloudflare_zone_setting` × 2 |
 | Access アプリ + ポリシー | Terraform | `infra/main.tf` |
 | Worker / アセット / D1 / DNS | Wrangler | `wrangler.jsonc` |
-| Zero Trust 組織 / IdP | **手動** | ダッシュボード（後述） |
+| Zero Trust 組織 / IdP / ゾーンの TLS 設定 | **手動** | ダッシュボード（後述） |
 
-5章で引いた境界線がそのまま形になった。HCL は 130 行ほどしかない。
+5章で引いた境界線がそのまま形になった。HCL は 90 行ほどしかない。
 
 ### やった順序（この順序自体が安全装置）
 
@@ -2694,7 +2693,9 @@ IdP が1つなので選択画面も出ず直接そこへ飛ぶ。
 ⚠️ Cloudflare アカウント（＝紐づく Google アカウント）が、インフラの管理権限と
 アプリへのアクセス権の**両方の鍵**になった。
 
-### Zero Trust 組織を Terraform で管理しない判断
+### Terraform に入れないと決めたもの（2つ）
+
+#### Zero Trust 組織
 
 当初は `cloudflare_zero_trust_organization` を `infra/main.tf` に書いていたが、
 **`apply` する前に撤回した。**
@@ -2715,8 +2716,45 @@ IaC の利点（壊してもコードから再現できる）を失った上で�
 唯一の実質的な設定だった `session_duration` も、アプリとポリシー側の値に
 上書きされるため実効値に影響しない（3箇所に書けて、細かいほうが優先される）。
 
+#### ゾーンの TLS 設定
+
+`cloudflare_zone_setting` で `min_tls_version` = 1.2、`always_use_https` = on を
+**一度 apply してから外した**。理由は組織とは別で、**スコープのずれ**。
+
+```
+infra/ が置かれている場所 = gym-memo アプリのリポジトリ
+zone settings が効く範囲   = kuni-app.dev 全体（将来の全アプリ）
+```
+
+Access のポリシーとアプリは `gym-memo.kuni-app.dev` を名指しした**アプリ固有の設定**
+なのでここにあるのが自然だが、ゾーン設定は gym-memo と何の関係も無い。
+2つ目のアプリ（`blog.kuni-app.dev` など）を別リポジトリで作ってそこでも
+TLS を宣言したくなったら、**2つの state が同じリソースを取り合う**。
+5章で「Terraform と Wrangler を重ねると起きる」と書いた二重管理の摩擦が、
+Terraform 同士で再発する形になる。
+
+外すコストはゼロだった。`terraform state rm` しても **Cloudflare 側の値は
+1.2 / on のまま変わらない**（ゾーン設定には削除という概念が無く、常に値を持つ）。
+本番の挙動は無変化、失うのは「宣言として残る」性質だけ。
+
+ゾーン用に別の Terraform ルートを切る案も検討したが、設定2個のために state を
+もう1つ増やすのは割に合わないので却下。WAF ルールなどでドメイン設定が実体を
+持ってきたら、そのとき切ればいい。
+
+⚠️ 手動にした設定の値は **`infra/README.md` に記録してある**。作り直すとき必要になる。
+
+### 判断基準が1文になった
+
+> **`infra/` は「このアプリに属するもの」を管理する。
+> ドメインやアカウントに属するものは手動の前提条件。**
+
+最初は組織だけを外していたため基準が2つ混在しており、それが
+「ドメイン全体の設定を Terraform でやるのは違和感がある」という指摘に繋がった。
+ゾーン設定も外したことで、判断が1本の線で説明できるようになった。
+
 > 5章に書いた「不自然に消耗したら手動設定に切り替える判断も持っておく」の実践。
 > どこまでを Terraform に入れるかを自分で判断したという意味で、これが今回一番の収穫。
+> **HCL は 90 行ほどしか残っていないが、それが正しい量。**
 
 ### ドメインについて
 

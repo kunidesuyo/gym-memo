@@ -141,8 +141,13 @@ UTC なので JST では午前9時より前が前日になる。ローカル時�
 ```
 Worker gym-memo  ← wrangler run deploy
 D1 gym-memo (APAC / a009e578-…)  種目51 / セッション267 / セット4190
-Access アプリ + ポリシー, ゾーンの TLS 設定  ← infra/ (Terraform)
+Access アプリ + ポリシー     ← infra/ (Terraform)
+Zero Trust 組織 / ゾーンの TLS ← 手動（値は infra/README.md に記録）
 ```
+
+**`infra/` は「このアプリに属するもの」だけを管理する。**ドメインやアカウントに
+属するものは手動の前提条件に置く（`infra/README.md` に値がある）。
+どちらも一度 Terraform で書いてから外した。経緯は 29章。
 
 ⚠️ **`workers_dev: false` / `preview_urls: false` を外さないこと。** 外すと
 `gym-memo.<subdomain>.workers.dev` が生える。これは **Access の対象外の別ホスト名**
