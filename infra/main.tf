@@ -114,6 +114,34 @@ resource "cloudflare_zero_trust_access_application" "gym_memo" {
   http_only_cookie_attribute = true
 }
 
+/**
+ * ゾーン設定。Access とは層が違う——Access が「誰を入れるか」、こちらは
+ * 「どういう通信で繋ぐか」。互いに依存しない。
+ *
+ * v5 では設定1つにつきリソース1つ。既存の値を Terraform の管理下に取り込む形なので、
+ * 初回の plan には create ではなく update（~）が出る。
+ *
+ * ⚠️ 実効性は限定的だと理解した上で入れている。.dev は HSTS プリロード済みで
+ *    ブラウザが HTTPS を強制し、現代のブラウザは TLS 1.0/1.1 を使わない。
+ *    「良くない設定を放置しない」という衛生上の理由。
+ *    ssl=strict や HSTS ヘッダは Worker に origin が無く本当に無意味なので入れない。
+ */
+
+resource "cloudflare_zone_setting" "min_tls_version" {
+  zone_id    = data.cloudflare_zone.main.zone_id
+  setting_id = "min_tls_version"
+  # 既定は 1.0。TLS 1.0 / 1.1 は非推奨で既知の弱点がある。
+  value = "1.2"
+}
+
+resource "cloudflare_zone_setting" "always_use_https" {
+  zone_id    = data.cloudflare_zone.main.zone_id
+  setting_id = "always_use_https"
+  # http:// で来たら 301 で https:// に飛ばす。
+  # ブラウザには HSTS プリロードが効くので、効くのは非ブラウザのクライアント。
+  value = "on"
+}
+
 output "auth_domain" {
   # Terraform の管理対象ではない（ダッシュボードで作る前提条件）。
   # ログイン画面の URL を思い出せるように組み立てているだけ。
