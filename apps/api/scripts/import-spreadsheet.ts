@@ -111,6 +111,22 @@ type Row = {
 /** 重量は DB にグラム整数で入れる（src/db/weight.ts と同じ変換）。 */
 const toG = (kg: number) => Math.round(kg * 1000)
 
+/**
+ * 1文あたりの VALUES 行数。
+ * 全4,000行超を1文にすると600KB を超え、D1（特に remote）の文サイズ上限に
+ * 引っかかるおそれがあるため分割する。
+ */
+const CHUNK = 500
+
+/** VALUES 行を CHUNK ごとの INSERT 文に分割する。 */
+function insertStatements(head: string, values: string[]): string[] {
+  const out: string[] = []
+  for (let i = 0; i < values.length; i += CHUNK) {
+    out.push(`${head}${LF}${values.slice(i, i + CHUNK).join(`,${LF}`)};`)
+  }
+  return out
+}
+
 const q = (s: string) => `'${s.replace(/'/g, "''")}'`
 
 /** 種目名から分割と部位を割り当てる。ユーザーと確定した規則。 */
@@ -220,22 +236,22 @@ function main() {
     'DELETE FROM workouts;',
     'DELETE FROM exercises;',
     '',
-    'INSERT INTO exercises (id, name, category, muscle_group) VALUES',
-    `${names
-      .map((n) => {
+    ...insertStatements(
+      'INSERT INTO exercises (id, name, category, muscle_group) VALUES',
+      names.map((n) => {
         const [cat, mus] = assignCategory(n)
         return `  (${q(exerciseIds.get(n) ?? '')}, ${q(n)}, ${q(cat)}, ${q(mus)})`
-      })
-      .join(`,${LF}`)};`,
+      }),
+    ),
     '',
-    'INSERT INTO workouts (id, performed_on) VALUES',
-    `${dates
-      .map((d) => `  (${q(workoutIds.get(d) ?? '')}, ${q(d)})`)
-      .join(`,${LF}`)};`,
+    ...insertStatements(
+      'INSERT INTO workouts (id, performed_on) VALUES',
+      dates.map((d) => `  (${q(workoutIds.get(d) ?? '')}, ${q(d)})`),
+    ),
     '',
-    'INSERT INTO sets (id, workout_id, exercise_id, set_order, weight_g, reps, is_successful, note) VALUES',
-    `${out
-      .map((r) => {
+    ...insertStatements(
+      'INSERT INTO sets (id, workout_id, exercise_id, set_order, weight_g, reps, is_successful, note) VALUES',
+      out.map((r) => {
         const key = `${r.date} ${r.exercise}`
         const order = (orderCounter.get(key) ?? 0) + 1
         orderCounter.set(key, order)
@@ -243,8 +259,8 @@ function main() {
         return `  (${q(uuidv7())}, ${q(workoutIds.get(r.date) ?? '')}, ${q(
           exerciseIds.get(r.exercise) ?? '',
         )}, ${order}, ${toG(r.weightKg)}, ${r.reps}, ${r.isSuccessful ? 1 : 0}, ${note})`
-      })
-      .join(`,${LF}`)};`,
+      }),
+    ),
   ]
 
   writeFileSync(outPath, lines.join(LF) + LF)
