@@ -32,6 +32,58 @@ describe('SetForm', () => {
     expect(onSubmit).not.toHaveBeenCalled()
   })
 
+  // ⚠️ iOS の数値キーパッドにはマイナスキーが無いので、負数はこのボタンでしか
+  //    入力できない。懸垂のアシスト量を負数で持つ設計の生命線。
+  describe('符号の反転ボタン', () => {
+    const sign = () => screen.getByRole('button', { name: '重量の符号を反転' })
+
+    it('入力済みの値を負数にして送信できる', async () => {
+      const user = userEvent.setup()
+      const onSubmit = vi.fn().mockResolvedValue(undefined)
+      render(<SetForm onSubmit={onSubmit} isPending={false} />)
+
+      await user.type(screen.getByLabelText('重量 (kg)'), '18')
+      await user.click(sign())
+      await user.type(screen.getByLabelText('回数'), '10')
+      await user.click(screen.getByRole('button', { name: '記録する' }))
+
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ weightKg: -18 }),
+      )
+    })
+
+    it('先に押してから数字を打てる', async () => {
+      const user = userEvent.setup()
+      const onSubmit = vi.fn().mockResolvedValue(undefined)
+      render(<SetForm onSubmit={onSubmit} isPending={false} />)
+
+      await user.click(sign())
+      await user.type(screen.getByLabelText('重量 (kg)'), '36')
+      await user.type(screen.getByLabelText('回数'), '10')
+      await user.click(screen.getByRole('button', { name: '記録する' }))
+
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ weightKg: -36 }),
+      )
+    })
+
+    it('もう一度押すと正に戻る', async () => {
+      const user = userEvent.setup()
+      const onSubmit = vi.fn().mockResolvedValue(undefined)
+      render(<SetForm onSubmit={onSubmit} isPending={false} />)
+
+      await user.type(screen.getByLabelText('重量 (kg)'), '18')
+      await user.click(sign())
+      await user.click(sign())
+      await user.type(screen.getByLabelText('回数'), '10')
+      await user.click(screen.getByRole('button', { name: '記録する' }))
+
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ weightKg: 18 }),
+      )
+    })
+  })
+
   it('正しい入力は数値に変換して渡す', async () => {
     const user = userEvent.setup()
     const onSubmit = vi.fn().mockResolvedValue(undefined)

@@ -76,14 +76,33 @@ export function SetForm({
     >
       <form.Field name="weightKg">
         {(field) => (
-          <TextField
-            label="重量 (kg)"
-            field={field}
-            inputMode="decimal"
-            placeholder="60"
-            className="w-24"
-            inputClassName="tabular-nums"
-          />
+          <div className="flex items-start gap-1">
+            <TextField
+              label="重量 (kg)"
+              field={field}
+              inputMode="decimal"
+              placeholder="60"
+              className="w-20"
+              inputClassName="tabular-nums"
+            />
+            {/*
+              ⚠️ iOS の数値キーパッド（inputMode="decimal" / "numeric"）には
+                 マイナスキーが無く、負数を打てない。懸垂のアシスト量を負数で
+                 持つ設計なので、符号はボタンで反転させる。
+                 inputMode を外して通常キーボードにする案は、数字を打つのに
+                 毎回レイヤ切り替えが要るので採らない。
+            */}
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="mt-5"
+              aria-label="重量の符号を反転"
+              onClick={() => field.handleChange(toggleSign(field.state.value))}
+            >
+              ±
+            </Button>
+          </div>
         )}
       </form.Field>
 
@@ -135,6 +154,15 @@ export function SetForm({
       </div>
     </form>
   )
+}
+
+/**
+ * 符号を反転する。空のときは `-` を置いて、数字を後から打てるようにする
+ * （「マイナスを押してから 18」という打ち方を許す）。
+ */
+function toggleSign(value: string) {
+  if (value.startsWith('-')) return value.slice(1)
+  return value === '' ? '-' : `-${value}`
 }
 
 /**
