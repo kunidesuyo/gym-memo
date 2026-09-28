@@ -153,6 +153,7 @@ export function ExerciseHistory({ exerciseId }: { exerciseId: string }) {
               name: exercise.name,
               category: exercise.category as Category,
               muscleGroup: exercise.muscleGroup as MuscleGroup,
+              displayOrder: String(exercise.displayOrder),
             }}
             submitLabel="更新する"
             error={update.error}

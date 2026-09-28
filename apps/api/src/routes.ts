@@ -169,9 +169,8 @@ export const routes = new Hono<{ Bindings: Env }>()
 
   /**
    * 前回の記録を種目まるごと今日に複製する。
-   *
-   * 1件ずつ POST を繰り返す実装にしない。ジムの電波で N 往復すると
-   * 途中で切れて「半分だけ入った」状態が生まれるため。
+   * ⚠️ 1件ずつ POST を繰り返さないこと。ジムの電波で N 往復すると
+   *    途中で切れて「半分だけ入った」状態になる。
    */
   .post(
     '/api/workouts/:id/sets/copy-last',
@@ -185,8 +184,7 @@ export const routes = new Hono<{ Bindings: Env }>()
       const workout = await getWorkout(db, id)
       if (!workout) return c.json({ error: 'workout not found' }, 404)
 
-      // 今日すでにこの種目の記録があれば足さない。
-      // 押し間違いで倍になる事故のほうが、押し直せない不便より高くつく。
+      // 押し間違いで倍になる事故のほうが、押し直せない不便より高くつく
       if (workout.sets.some((s) => s.exerciseId === exerciseId)) {
         return c.json({ error: 'この種目は今日すでに記録があります' }, 409)
       }

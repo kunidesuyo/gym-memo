@@ -70,6 +70,13 @@ export const newExerciseSchema = z.object({
     .max(50, '長すぎます'),
   category: categorySchema,
   muscleGroup: muscleGroupSchema,
+  /** 分割の中での表示順。小さいほど上。既定 999 = 未設定で、下に沈む。 */
+  displayOrder: z
+    .number('数値で入力してください')
+    .int('整数で入力してください')
+    .min(0, '0以上で入力してください')
+    .max(9999, '大きすぎます')
+    .default(999),
 })
 
 export type NewExercise = z.infer<typeof newExerciseSchema>
@@ -77,4 +84,18 @@ export type NewExercise = z.infer<typeof newExerciseSchema>
 /** 一覧の絞り込み。 */
 export const exerciseQuerySchema = z.object({
   category: categorySchema.optional(),
+})
+
+/** フォーム入力用。文字列で届くので数値に直す。空欄は未設定（999）。 */
+export const exerciseFormSchema = newExerciseSchema.extend({
+  displayOrder: z
+    .string()
+    .transform((v) => (v.trim() === '' ? 999 : Number(v)))
+    .pipe(
+      z
+        .number('数値で入力してください')
+        .int('整数で入力してください')
+        .min(0, '0以上で入力してください')
+        .max(9999, '大きすぎます'),
+    ),
 })

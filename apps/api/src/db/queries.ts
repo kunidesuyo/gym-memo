@@ -1,5 +1,5 @@
 import { and, count, desc, eq, inArray, ne, sql } from 'drizzle-orm'
-import type { NewExercise } from '../schema/exercise'
+import { categories, type NewExercise } from '../schema/exercise'
 import type { Db } from './index'
 import { toG, toKg } from './weight'
 
@@ -12,10 +12,18 @@ const withKg = <T extends { weightG: number }>({ weightG, ...rest }: T) => ({
 import { exercises, sets, workouts } from './schema'
 
 /**
- * 種目一覧。記録済みのセット数を添える。
- *
- * 並びは**セット数の多い順**。よく使う種目が上に来るので、
- * 記録画面の種目選択がそのまま使える（種目が50件を超えるため）。
+ * 分割の並び順。`categories` の定義順。
+ * ⚠️ その他が末尾に来ることに記録画面が依存している。
+ */
+const categoryRank = sql`case ${exercises.category} ${sql.join(
+  categories.map((c, i) => sql`when ${c} then ${i}`),
+  sql` `,
+)} end`
+
+/**
+ * 種目一覧。並びは 分割 → displayOrder → 名前。
+ * ⚠️ sets を join しないこと。かつてセット数順に並べており、
+ *    1回の呼び出しで sets を全件読んでいた（4,200行読んで51行返す）。
  */
 export function listExercises(
   db: Db,
@@ -27,14 +35,12 @@ export function listExercises(
       name: exercises.name,
       category: exercises.category,
       muscleGroup: exercises.muscleGroup,
+      displayOrder: exercises.displayOrder,
       createdAt: exercises.createdAt,
-      setCount: count(sets.id),
     })
     .from(exercises)
-    .leftJoin(sets, eq(sets.exerciseId, exercises.id))
     .where(category ? eq(exercises.category, category) : undefined)
-    .groupBy(exercises.id)
-    .orderBy(desc(count(sets.id)), exercises.name)
+    .orderBy(categoryRank, exercises.displayOrder, exercises.name)
 }
 
 export async function getExercise(db: Db, id: string) {
@@ -167,17 +173,11 @@ export async function addSet(
 }
 
 /**
- * 前回この種目をやったときのセットを、そのまま今日に複製する。
+ * 前回この種目をやったときのセットを、そのまま今日に複製する。前回が無ければ null。
  *
- * ウォームアップの積み方は前回とほぼ同じになるので、丸ごと入れてから
- * 違うところだけ直すほうが打鍵が少ない。
- *
- * ⚠️ **kg に直さずグラムのまま写す。** getLastSets 経由で kg を受け取って
- *    入れ直すと、g → kg → g の往復で `Math.round` を1回余計に挟むことになる。
- *
- * 前回が無ければ null。呼び出し側が 404 にする。
- * 今日すでにこの種目の記録がある場合は**呼ばない**（ルート側で 409 にしている）。
- * setOrder を 1 から振り直すのはそれが前提。
+ * ⚠️ kg に直さずグラムのまま写す。往復すると `Math.round` を余計に挟む。
+ * ⚠️ setOrder を 1 から振り直すので、今日すでに記録がある種目には呼ばないこと
+ *    （ルート側で 409 にしている）。
  */
 export async function copyLastSets(
   db: Db,
@@ -214,8 +214,7 @@ export async function copyLastSets(
         setOrder: i + 1,
         weightG: s.weightG,
         reps: s.reps,
-        // 失敗も含めてそのまま写す。「前回の記録のコピー」であることを
-        // 画面の表示と一致させるため。違えば画面で直す。
+        // 失敗も含めてそのまま写す。画面に出ている内容と一致させるため
         isSuccessful: s.isSuccessful,
         isMainSet: s.isMainSet,
         note: s.note,

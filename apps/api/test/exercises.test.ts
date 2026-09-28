@@ -2,6 +2,7 @@ import { exports } from 'cloudflare:workers'
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import { addSet, createWorkout } from '../src/db/queries'
+import { exercises } from '../src/db/schema'
 import { resetDb, seedExercises, testDb } from './helpers'
 
 /** 形式は正しいが存在しない UUID。404 の確認に使う。 */
@@ -10,13 +11,11 @@ const MISSING_ID = '01a0bf17-0000-7000-8000-000000000000'
 const BASE = 'https://example.com'
 
 let benchId: string
-let squatId: string
 
 beforeEach(async () => {
   await resetDb()
-  const { bench, squat } = await seedExercises()
+  const { bench } = await seedExercises()
   benchId = bench.id
-  squatId = squat.id
 })
 
 function send(method: string, path: string, body?: unknown) {
@@ -159,34 +158,51 @@ describe('DELETE /api/exercises/:id', () => {
 })
 
 describe('種目一覧の並び順', () => {
-  it('セット数の多い順に並ぶ（記録画面の select がそのまま使える）', async () => {
+  it('分割 → displayOrder → 名前 の順に並ぶ', async () => {
     const db = testDb()
-    const w = await createWorkout(db, '2026-09-21')
-
-    // スクワットを3セット、ベンチを1セット
-    for (const weight of [100, 105, 110]) {
-      await addSet(db, w.id, { exerciseId: squatId, weightKg: weight, reps: 5 })
-    }
-    await addSet(db, w.id, { exerciseId: benchId, weightKg: 60, reps: 10 })
+    await db.insert(exercises).values([
+      { name: 'ラットプルダウン', category: 'pull', muscleGroup: 'back' },
+      { name: '腹筋', category: 'other', muscleGroup: 'other' },
+      {
+        name: 'ディップス',
+        category: 'push',
+        muscleGroup: 'chest',
+        displayOrder: 10,
+      },
+    ])
 
     const res = await exports.default.fetch(`${BASE}/api/exercises`)
-    const rows = (await res.json()) as { name: string; setCount: number }[]
+    const rows = (await res.json()) as { name: string }[]
 
-    expect(rows.map((r) => [r.name, r.setCount])).toEqual([
-      ['スクワット', 3],
-      ['ベンチプレス', 1],
+    // 既定は 999 なので、番号を振ったディップスだけが上に来る
+    expect(rows.map((r) => r.name)).toEqual([
+      'ディップス',
+      'ベンチプレス',
+      'ラットプルダウン',
+      'スクワット',
+      '腹筋',
     ])
   })
 
-  it('記録が無い種目は setCount 0 で末尾に来る', async () => {
+  it('displayOrder が同じなら名前順（未設定のまま放置できる）', async () => {
     const db = testDb()
-    const w = await createWorkout(db, '2026-09-21')
-    await addSet(db, w.id, { exerciseId: benchId, weightKg: 60, reps: 10 })
+    await db
+      .insert(exercises)
+      .values([
+        { name: 'アブローラー', category: 'push', muscleGroup: 'chest' },
+      ])
 
     const res = await exports.default.fetch(`${BASE}/api/exercises`)
-    const rows = (await res.json()) as { name: string; setCount: number }[]
+    const rows = (await res.json()) as { name: string; displayOrder: number }[]
+    const push = rows.filter((r) => r.displayOrder === 999).map((r) => r.name)
 
-    expect(rows[0]).toMatchObject({ name: 'ベンチプレス', setCount: 1 })
-    expect(rows[rows.length - 1]).toMatchObject({ setCount: 0 })
+    expect(push.slice(0, 2)).toEqual(['アブローラー', 'ベンチプレス'])
+  })
+
+  // かつては sets を leftJoin して数えており、1回の呼び出しで sets を全件読んでいた
+  it('セット数は返さない', async () => {
+    const res = await exports.default.fetch(`${BASE}/api/exercises`)
+    const rows = (await res.json()) as Record<string, unknown>[]
+    expect(rows[0]).not.toHaveProperty('setCount')
   })
 })

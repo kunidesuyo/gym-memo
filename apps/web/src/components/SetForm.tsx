@@ -72,9 +72,7 @@ export function SetForm({
         e.preventDefault()
         form.handleSubmit()
       }}
-      // 3行に固める。折り返しに任せると画面幅で並びが変わり、
-      // ジムで見たときに毎回どこを押すか探すことになる。
-      //   1行目 重量・回数 / 2行目 チェックボックス / 3行目 メモ
+      // 折り返しに任せると画面幅で並びが変わり、毎回どこを押すか探すことになる
       className="flex flex-col gap-3"
     >
       <div className="flex items-start gap-2">
@@ -82,13 +80,8 @@ export function SetForm({
           {(field) => (
             <div className="flex items-start gap-1">
               {/*
-                ⚠️ iOS の数値キーパッド（inputMode="decimal" / "numeric"）には
-                   マイナスキーが無く、負数を打てない。懸垂のアシスト量を負数で
-                   持つ設計なので、符号はボタンで反転させる。
-                   inputMode を外して通常キーボードにする案は、数字を打つのに
-                   毎回レイヤ切り替えが要るので採らない。
-                入力欄の**左**に置くのは、表示される順序（-18）と操作の順序を
-                揃えるため。
+                ⚠️ iOS の数値キーパッドにはマイナスキーが無い。懸垂のアシスト量を
+                   負数で持つので、これを消すと iPhone から記録できなくなる。
               */}
               <Button
                 type="button"

@@ -32,6 +32,13 @@ function withExistingSets() {
   )
 }
 
+function optionNames() {
+  return screen
+    .getAllByRole('option')
+    .map((o) => o.textContent)
+    .filter((t) => t !== '選択してください')
+}
+
 async function selectBenchPress() {
   const user = userEvent.setup()
   await screen.findByRole('option', { name: 'ベンチプレス' })
@@ -50,22 +57,56 @@ describe('WorkoutDetail', () => {
     expect(screen.queryByRole('button', { name: '記録する' })).toBeNull()
   })
 
-  it('種目の選択肢はセット数の多い順に並ぶ', async () => {
+  it('種目の選択肢はサーバーが返した並びのまま出る', async () => {
     renderWithRouter(<WorkoutDetail workoutId={WORKOUT_ID} />)
     await screen.findByRole('option', { name: 'ベンチプレス' })
 
-    const options = screen
-      .getAllByRole('option')
-      .map((o) => o.textContent)
-      .filter((t) => t !== '選択してください')
-
-    // フィクスチャのセット数: ベンチ12 / スクワット8 / ラットプル3 / サイドレイズ0
-    expect(options).toEqual([
+    // 並び（分割 → displayOrder → 名前）はサーバーが決める。画面では並べ替えない
+    expect(optionNames()).toEqual([
       'ベンチプレス',
-      'スクワット',
-      'ラットプルダウン',
       'サイドレイズ',
+      'ラットプルダウン',
+      'スクワット',
+      '腹筋',
     ])
+  })
+
+  describe('分割で種目を絞る', () => {
+    it('Push を選ぶと push とその他だけになる', async () => {
+      renderWithRouter(<WorkoutDetail workoutId={WORKOUT_ID} />)
+      const user = userEvent.setup()
+      await screen.findByRole('option', { name: 'ベンチプレス' })
+
+      await user.click(screen.getByRole('button', { name: 'Push' }))
+
+      // 腹筋（その他）はどの分割でも末尾に残る
+      expect(optionNames()).toEqual(['ベンチプレス', 'サイドレイズ', '腹筋'])
+    })
+
+    it('すべてに戻すと全件に戻る', async () => {
+      renderWithRouter(<WorkoutDetail workoutId={WORKOUT_ID} />)
+      const user = userEvent.setup()
+      await screen.findByRole('option', { name: 'ベンチプレス' })
+
+      await user.click(screen.getByRole('button', { name: 'Legs' }))
+      expect(optionNames()).toEqual(['スクワット', '腹筋'])
+
+      await user.click(screen.getByRole('button', { name: 'すべて' }))
+      expect(optionNames()).toHaveLength(5)
+    })
+
+    // 残すと select の value に合う option が無くなり、空欄に見える
+    it('選択中の種目が絞り込みで消えたら選択も外れる', async () => {
+      renderWithRouter(<WorkoutDetail workoutId={WORKOUT_ID} />)
+      const user = await selectBenchPress()
+
+      expect(await screen.findByText('2026-09-13')).toBeInTheDocument()
+
+      await user.click(screen.getByRole('button', { name: 'Legs' }))
+
+      // 前回の記録も記録フォームも消える（種目未選択の状態）
+      expect(screen.queryByRole('button', { name: '記録する' })).toBeNull()
+    })
   })
 
   it('種目を選ぶと前回の記録を表示する', async () => {

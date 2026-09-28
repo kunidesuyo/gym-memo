@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "6f1dfee4-33af-44dc-8154-c2856e0c85a4",
-  "prevId": "b331da1d-b8fd-4105-aee7-7f08fb3592ef",
+  "id": "61c66c43-9fe5-46b9-a73a-bc31f60d65ac",
+  "prevId": "6f1dfee4-33af-44dc-8154-c2856e0c85a4",
   "tables": {
     "exercises": {
       "name": "exercises",
@@ -34,6 +34,14 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
+        },
+        "display_order": {
+          "name": "display_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 999
         },
         "created_at": {
           "name": "created_at",

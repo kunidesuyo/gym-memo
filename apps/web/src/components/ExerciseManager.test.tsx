@@ -133,7 +133,7 @@ describe('ExerciseManager', () => {
       expect(visibleNames()).toEqual(['ラットプルダウン'])
 
       await user.click(screen.getByRole('button', { name: 'クリア' }))
-      expect(visibleNames()).toHaveLength(4)
+      expect(visibleNames()).toHaveLength(5)
     })
   })
 

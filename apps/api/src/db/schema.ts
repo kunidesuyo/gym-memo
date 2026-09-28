@@ -37,6 +37,13 @@ export const exercises = sqliteTable('exercises', {
     .notNull()
     .$type<'push' | 'pull' | 'legs' | 'other'>(),
   muscleGroup: text('muscle_group').notNull(),
+  /**
+   * 画面に出す順番。**分割の中で**小さいほど上。同値は名前順。
+   * 既定 999 = 未設定。番号を振った種目より下に沈む（0 にすると逆になる）。
+   * ⚠️ UNIQUE を張らないこと。入れ替えが一時値を経由する多段階になり、
+   *    分割を変えただけで衝突して 409 になる。
+   */
+  displayOrder: integer('display_order').notNull().default(999),
   createdAt: text('created_at').notNull().default(sql`(current_timestamp)`),
 })
 

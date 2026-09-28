@@ -233,10 +233,7 @@ export function useAddSet(workoutId: string) {
 
 /**
  * 前回の記録を種目まるごと今日に複製する。
- *
- * 楽観的更新はしない。サーバーが何セット作るかは前回の記録次第で、
- * 画面側が正しく予測できないため（予測を外すと一瞬おかしな行が出る）。
- * セット単位の追加と違って連打する操作でもないので、応答を待ってよい。
+ * 楽観的更新はしない。サーバーが何セット作るかを画面側が予測できないため。
  */
 export function useCopyLastSets(workoutId: string) {
   const qc = useQueryClient()

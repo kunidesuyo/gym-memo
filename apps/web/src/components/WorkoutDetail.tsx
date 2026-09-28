@@ -1,4 +1,5 @@
 import { Link, useNavigate } from '@tanstack/react-router'
+import { categoryLabels } from 'api/schema/exercise'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Field, FieldLabel } from '@/components/ui/field'
@@ -36,8 +37,23 @@ function groupByExercise(sets: WorkoutSet[]): Group[] {
   return groups
 }
 
+/** その他はどの分割でも出すので、選択肢には入れない。 */
+type Split = 'all' | 'push' | 'pull' | 'legs'
+
+const splitOptions: { value: Split; label: string }[] = [
+  { value: 'all', label: 'すべて' },
+  { value: 'push', label: categoryLabels.push },
+  { value: 'pull', label: categoryLabels.pull },
+  { value: 'legs', label: categoryLabels.legs },
+]
+
+/** その他（腹筋系）はどの日にもやるので常に出す。 */
+const inSplit = (e: { category: string }, split: Split) =>
+  split === 'all' || e.category === split || e.category === 'other'
+
 export function WorkoutDetail({ workoutId }: { workoutId: string }) {
   const [exerciseId, setExerciseId] = useState('')
+  const [split, setSplit] = useState<Split>('all')
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const navigate = useNavigate()
 
@@ -60,6 +76,17 @@ export function WorkoutDetail({ workoutId }: { workoutId: string }) {
     )
 
   const groups = groupByExercise(workout.data?.sets ?? [])
+  // 並びはサーバーが分割順にしているので、絞るだけでその他が末尾に残る
+  const visible = (exercises.data ?? []).filter((e) => inSplit(e, split))
+
+  // 選択中の種目が絞り込みで消えたら選択も外す（option が無いと空欄に見える）
+  const changeSplit = (next: Split) => {
+    setSplit(next)
+    const kept = exercises.data?.some(
+      (e) => e.id === exerciseId && inSplit(e, next),
+    )
+    if (!kept) setExerciseId('')
+  }
   const mutationError =
     addSet.error ?? copyLastSets.error ?? updateSet.error ?? deleteSet.error
 
@@ -117,6 +144,22 @@ export function WorkoutDetail({ workoutId }: { workoutId: string }) {
         </p>
       )}
 
+      <fieldset className="flex gap-1">
+        <legend className="sr-only">分割</legend>
+        {splitOptions.map((o) => (
+          <Button
+            key={o.value}
+            type="button"
+            size="sm"
+            variant={split === o.value ? 'default' : 'outline'}
+            aria-pressed={split === o.value}
+            onClick={() => changeSplit(o.value)}
+          >
+            {o.label}
+          </Button>
+        ))}
+      </fieldset>
+
       <Field>
         <FieldLabel
           htmlFor="exercise"
@@ -131,7 +174,7 @@ export function WorkoutDetail({ workoutId }: { workoutId: string }) {
           onChange={(e) => setExerciseId(e.target.value)}
         >
           <NativeSelectOption value="">選択してください</NativeSelectOption>
-          {exercises.data?.map((e) => (
+          {visible.map((e) => (
             <NativeSelectOption key={e.id} value={e.id}>
               {e.name}
             </NativeSelectOption>

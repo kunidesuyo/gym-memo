@@ -15,32 +15,19 @@ import type {
  */
 export const BENCH_ID = '01a0bf17-b376-7779-828a-c36eec5b701c'
 export const SQUAT_ID = '01a0bf17-b376-7779-828a-e1cdd8f5e8ea'
+export const ABS_ID = '01a0bf17-b376-7779-828a-000000000005'
 export const WORKOUT_ID = '01a0bf20-0000-7000-8000-000000000010'
 
+// サーバーが返す並び（分割 → displayOrder → 名前）のままにしてある。
+// msw はこの配列をそのまま返すので、ここが崩れていると画面のテストが嘘になる。
 export const exercisesFixture: Exercise[] = [
   {
-    id: '01a0bf17-b376-7779-828a-c36eec5b701c',
+    id: BENCH_ID,
     name: 'ベンチプレス',
     category: 'push',
     muscleGroup: 'chest',
     createdAt: '2026-09-01',
-    setCount: 12,
-  },
-  {
-    id: '01a0bf17-b376-7779-828a-e1cdd8f5e8ea',
-    name: 'スクワット',
-    category: 'legs',
-    muscleGroup: 'quads',
-    createdAt: '2026-09-01',
-    setCount: 8,
-  },
-  {
-    id: '01a0bf17-b376-7779-828a-000000000003',
-    name: 'ラットプルダウン',
-    category: 'pull',
-    muscleGroup: 'back',
-    createdAt: '2026-09-01',
-    setCount: 3,
+    displayOrder: 10,
   },
   {
     id: '01a0bf17-b376-7779-828a-000000000004',
@@ -48,7 +35,31 @@ export const exercisesFixture: Exercise[] = [
     category: 'push',
     muscleGroup: 'shoulders',
     createdAt: '2026-09-01',
-    setCount: 0,
+    displayOrder: 20,
+  },
+  {
+    id: '01a0bf17-b376-7779-828a-000000000003',
+    name: 'ラットプルダウン',
+    category: 'pull',
+    muscleGroup: 'back',
+    createdAt: '2026-09-01',
+    displayOrder: 10,
+  },
+  {
+    id: SQUAT_ID,
+    name: 'スクワット',
+    category: 'legs',
+    muscleGroup: 'quads',
+    createdAt: '2026-09-01',
+    displayOrder: 10,
+  },
+  {
+    id: ABS_ID,
+    name: '腹筋',
+    category: 'other',
+    muscleGroup: 'other',
+    createdAt: '2026-09-01',
+    displayOrder: 10,
   },
 ]
 
@@ -96,6 +107,7 @@ export const historyFixture: ExerciseHistory = {
     name: 'ベンチプレス',
     category: 'push',
     muscleGroup: 'chest',
+    displayOrder: 10,
     createdAt: '2026-09-01',
   },
   sessions: [

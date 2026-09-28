@@ -4,10 +4,11 @@ import {
   categories,
   categoryLabels,
   defaultCategoryFor,
+  exerciseFormSchema,
   type MuscleGroup,
   muscleGroupLabels,
   muscleGroups,
-  newExerciseSchema,
+  type NewExercise,
 } from 'api/schema/exercise'
 import { useId } from 'react'
 import { Button } from '@/components/ui/button'
@@ -24,6 +25,8 @@ export type ExerciseFormValues = {
   name: string
   category: Category
   muscleGroup: MuscleGroup
+  /** 変換は exerciseFormSchema がやる。 */
+  displayOrder: string
 }
 
 export function ExerciseForm({
@@ -35,7 +38,7 @@ export function ExerciseForm({
 }: {
   initial?: ExerciseFormValues
   submitLabel: string
-  onSubmit: (values: ExerciseFormValues) => Promise<unknown>
+  onSubmit: (values: NewExercise) => Promise<unknown>
   onCancel: () => void
   error?: Error | null
 }) {
@@ -47,10 +50,11 @@ export function ExerciseForm({
       name: '',
       category: 'push' as Category,
       muscleGroup: 'chest' as MuscleGroup,
+      displayOrder: '',
     },
-    validators: { onSubmit: newExerciseSchema },
+    validators: { onSubmit: exerciseFormSchema },
     onSubmit: async ({ value }) => {
-      await onSubmit(newExerciseSchema.parse(value))
+      await onSubmit(exerciseFormSchema.parse(value))
     },
   })
 
@@ -157,6 +161,43 @@ export function ExerciseForm({
             )}
           </form.Field>
         </div>
+        <form.Field name="displayOrder">
+          {(field) => {
+            const errors = field.state.meta.errors as Array<
+              { message?: string } | undefined
+            >
+            const hasError = errors.length > 0
+            return (
+              <Field data-invalid={hasError || undefined}>
+                <FieldLabel
+                  htmlFor={`${uid}-displayOrder`}
+                  className="text-muted-foreground text-xs"
+                >
+                  表示順（分割の中での順番。空欄なら名前順）
+                </FieldLabel>
+                <Input
+                  id={`${uid}-displayOrder`}
+                  name={field.name}
+                  inputMode="numeric"
+                  placeholder="10"
+                  className="w-28 tabular-nums"
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  aria-invalid={hasError}
+                  aria-describedby={
+                    hasError ? `${uid}-displayOrder-error` : undefined
+                  }
+                />
+                <FieldError
+                  id={`${uid}-displayOrder-error`}
+                  errors={errors}
+                  className="text-xs"
+                />
+              </Field>
+            )
+          }}
+        </form.Field>
       </FieldGroup>
 
       {error && (

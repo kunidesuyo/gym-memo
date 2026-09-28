@@ -15,7 +15,7 @@ export function LastSets({
   /** 前回のセットをまとめて今日に登録する。 */
   onCopy: () => void
   isCopyPending: boolean
-  /** 今日すでにこの種目の記録があるときは false。サーバーも 409 で弾く。 */
+  /** 今日すでに記録があるときは false。サーバーも 409 で弾く。 */
   canCopy: boolean
 }) {
   return (
