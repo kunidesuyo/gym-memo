@@ -10,9 +10,9 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ExercisesIndexRouteImport } from './routes/exercises.index'
-import { Route as ExercisesExerciseIdRouteImport } from './routes/exercises.$exerciseId'
-import { Route as WorkoutsWorkoutIdRouteImport } from './routes/workouts.$workoutId'
+import { Route as ExercisesIndexRouteImport } from './routes/exercises/index'
+import { Route as ExercisesExerciseIdRouteImport } from './routes/exercises/$exerciseId'
+import { Route as WorkoutsWorkoutIdRouteImport } from './routes/workouts/$workoutId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
