@@ -1,15 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { Category, NewExercise } from 'api/schema/exercise'
 import type { SetInput } from 'api/schema/set'
 import type { InferResponseType } from 'hono/client'
-import { client } from './client'
-import { keys } from './keys'
+import { client } from '@/api/client'
+import { errorFrom } from '@/api/error'
+import { keys } from '@/api/keys'
+// 楽観的更新で種目名を取得済みキャッシュから借りるため。向きは
+// workouts → exercises の一方向だけ（逆向きの参照を作らないこと）。
+import type { Exercise } from '@/features/exercises/api'
 
 // zValidator を付けたルートは 400 も返すため、200 に絞らないとユニオンになる
-export type Exercise = InferResponseType<
-  typeof client.api.exercises.$get,
-  200
->[number]
 export type Workout = InferResponseType<
   (typeof client.api.workouts)[':id']['$get'],
   200
@@ -24,75 +23,6 @@ export type LastSetsResult = InferResponseType<
   (typeof client.api.exercises)[':id']['last-sets']['$get'],
   200
 >
-
-/**
- * サーバーが返すエラーメッセージを拾う。落ちたら既定文言にフォールバックする。
- *
- * 引数を `Response` にしないのは、web の tsconfig が worker-configuration.d.ts を
- * 読んでいるため `Response` が Worker 版（webSocket / cf を持つ）になり、
- * Hono の ClientResponse を受け取れないから。必要な形だけを構造的に受ける。
- */
-async function errorFrom(res: { json(): Promise<unknown> }, fallback: string) {
-  try {
-    const body = (await res.json()) as { error?: string }
-    return new Error(body.error ?? fallback)
-  } catch {
-    return new Error(fallback)
-  }
-}
-
-export function useExercises(category?: Category) {
-  return useQuery({
-    queryKey: keys.exercises(category),
-    queryFn: async () => {
-      const res = await client.api.exercises.$get({
-        query: category ? { category } : {},
-      })
-      if (!res.ok) throw new Error('種目の取得に失敗しました')
-      return res.json()
-    },
-  })
-}
-
-export function useCreateExercise() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async (input: NewExercise) => {
-      const res = await client.api.exercises.$post({ json: input })
-      if (!res.ok) throw await errorFrom(res, '種目の追加に失敗しました')
-      return res.json()
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['exercises'] }),
-  })
-}
-
-export function useUpdateExercise() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async ({ id, ...input }: NewExercise & { id: string }) => {
-      const res = await client.api.exercises[':id'].$patch({
-        param: { id },
-        json: input,
-      })
-      if (!res.ok) throw await errorFrom(res, '種目の更新に失敗しました')
-      return res.json()
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['exercises'] }),
-  })
-}
-
-export function useDeleteExercise() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async (id: string) => {
-      const res = await client.api.exercises[':id'].$delete({ param: { id } })
-      // 使用中の種目は 409。サーバーの文言をそのまま見せる
-      if (!res.ok) throw await errorFrom(res, '種目の削除に失敗しました')
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['exercises'] }),
-  })
-}
-
 export function useWorkouts() {
   return useQuery({
     queryKey: keys.workouts(),
@@ -110,24 +40,6 @@ export function useWorkout(id: string) {
     queryFn: async () => {
       const res = await client.api.workouts[':id'].$get({ param: { id } })
       if (!res.ok) throw new Error('セッションの取得に失敗しました')
-      return res.json()
-    },
-  })
-}
-
-export type ExerciseHistory = InferResponseType<
-  (typeof client.api.exercises)[':id']['history']['$get'],
-  200
->
-
-export function useExerciseHistory(exerciseId: string) {
-  return useQuery({
-    queryKey: keys.exerciseHistory(exerciseId),
-    queryFn: async () => {
-      const res = await client.api.exercises[':id'].history.$get({
-        param: { id: exerciseId },
-      })
-      if (!res.ok) throw await errorFrom(res, '記録の取得に失敗しました')
       return res.json()
     },
   })

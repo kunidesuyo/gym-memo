@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { WorkoutCalendar } from '@/components/WorkoutCalendar'
+import { WorkoutCalendar } from '@/features/workouts/WorkoutCalendar'
 
 export const Route = createFileRoute('/')({
   component: WorkoutCalendar,

@@ -6,6 +6,7 @@ import {
   muscleGroupLabels,
 } from 'api/schema/exercise'
 import { useState } from 'react'
+import { SetLine } from '@/components/SetLine'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -13,13 +14,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import {
-  useDeleteExercise,
-  useExerciseHistory,
-  useUpdateExercise,
-} from '../api/hooks'
+import { useDeleteExercise, useExerciseHistory, useUpdateExercise } from './api'
 import { ExerciseForm } from './ExerciseForm'
-import { SetLine } from './SetLine'
 
 /** 種目の詳細。記録の一覧と、この種目自体の編集・削除を担う。 */
 export function ExerciseHistory({ exerciseId }: { exerciseId: string }) {

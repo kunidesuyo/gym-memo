@@ -1,10 +1,10 @@
+import { BENCH_ID, historyFixture, WORKOUT_ID } from '@test/msw/handlers'
+import { server } from '@test/msw/server'
+import { renderWithRouter } from '@test/utils'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { HttpResponse, http } from 'msw'
 import { describe, expect, it } from 'vitest'
-import { BENCH_ID, historyFixture, WORKOUT_ID } from '../../test/msw/handlers'
-import { server } from '../../test/msw/server'
-import { renderWithRouter } from '../../test/utils'
 import { ExerciseHistory } from './ExerciseHistory'
 
 describe('ExerciseHistory', () => {

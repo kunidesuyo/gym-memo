@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { ExerciseHistory } from '@/components/ExerciseHistory'
+import { ExerciseHistory } from '@/features/exercises/ExerciseHistory'
 
 export const Route = createFileRoute('/exercises/$exerciseId')({
   component: RouteComponent,

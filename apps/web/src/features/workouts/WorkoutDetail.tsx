@@ -4,17 +4,19 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Field, FieldLabel } from '@/components/ui/field'
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
+// 種目の選択肢が要るので exercises に依存する。向きは workouts → exercises の
+// 一方向だけ（exercises 側から workouts を参照しないこと）。
+import { useExercises } from '@/features/exercises/api'
 import {
   useAddSet,
   useCopyLastSets,
   useDeleteSet,
   useDeleteWorkout,
-  useExercises,
   useLastSets,
   useUpdateSet,
   useWorkout,
   type WorkoutSet,
-} from '../api/hooks'
+} from './api'
 import { LastSets } from './LastSets'
 import { SetForm } from './SetForm'
 import { SetRow } from './SetRow'

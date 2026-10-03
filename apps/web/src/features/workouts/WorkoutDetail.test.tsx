@@ -1,16 +1,16 @@
-import { screen, waitFor, within } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import { delay, HttpResponse, http } from 'msw'
-import { describe, expect, it } from 'vitest'
 import {
   BENCH_ID,
   copiedSetsFixture,
   WORKOUT_ID,
   workoutFixture,
   workoutWithSetsFixture,
-} from '../../test/msw/handlers'
-import { server } from '../../test/msw/server'
-import { renderWithRouter } from '../../test/utils'
+} from '@test/msw/handlers'
+import { server } from '@test/msw/server'
+import { renderWithRouter } from '@test/utils'
+import { screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { delay, HttpResponse, http } from 'msw'
+import { describe, expect, it } from 'vitest'
 import { WorkoutDetail } from './WorkoutDetail'
 
 /**

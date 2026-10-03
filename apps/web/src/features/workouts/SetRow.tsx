@@ -1,8 +1,8 @@
 import { useState } from 'react'
+import { SetLine } from '@/components/SetLine'
 import { Button } from '@/components/ui/button'
-import type { WorkoutSet } from '../api/hooks'
+import type { WorkoutSet } from './api'
 import { SetForm } from './SetForm'
-import { SetLine } from './SetLine'
 
 export function SetRow({
   set,

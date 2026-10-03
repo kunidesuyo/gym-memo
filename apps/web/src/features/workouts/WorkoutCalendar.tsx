@@ -1,7 +1,7 @@
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { useCreateWorkout, useWorkouts } from '../api/hooks'
+import { useCreateWorkout, useWorkouts } from './api'
 
 /**
  * ホーム。月カレンダーで「やった日」を示し、押すとその日の記録へ飛ぶ。

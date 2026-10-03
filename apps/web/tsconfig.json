@@ -5,7 +5,10 @@
     "jsx": "react-jsx",
     "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom"],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      // test/ は src/ の外なので @/ では届かない。features の中から
+      // ../../../test と書かずに済むように別名で張る（vitest.config.ts と対）。
+      "@test/*": ["./test/*"]
     }
   },
   "include": [

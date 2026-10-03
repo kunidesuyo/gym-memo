@@ -13,7 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { useCreateExercise, useExercises } from '../api/hooks'
+import { useCreateExercise, useExercises } from './api'
 import {
   applyFilter,
   type ExerciseFilter,

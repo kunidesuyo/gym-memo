@@ -1,7 +1,7 @@
+import { SetLine } from '@/components/SetLine'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import type { LastSetsResult } from '../api/hooks'
-import { SetLine } from './SetLine'
+import type { LastSetsResult } from './api'
 
 export function LastSets({
   data,

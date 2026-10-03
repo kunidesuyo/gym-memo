@@ -1,12 +1,11 @@
 import type { NewExercise } from 'api/schema/exercise'
 import { delay, HttpResponse, http } from 'msw'
+import type { Exercise, ExerciseHistory } from '@/features/exercises/api'
 import type {
-  Exercise,
-  ExerciseHistory,
   LastSetsResult,
   Workout,
   WorkoutSummary,
-} from '../../src/api/hooks'
+} from '@/features/workouts/api'
 
 /**
  * モックのレスポンス型を実際の API の推論型に縛る。

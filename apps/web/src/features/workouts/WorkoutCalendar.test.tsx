@@ -1,10 +1,10 @@
+import { WORKOUT_ID, workoutsFixture } from '@test/msw/handlers'
+import { server } from '@test/msw/server'
+import { renderWithRouter } from '@test/utils'
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { HttpResponse, http } from 'msw'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { WORKOUT_ID, workoutsFixture } from '../../test/msw/handlers'
-import { server } from '../../test/msw/server'
-import { renderWithRouter } from '../../test/utils'
 import { WorkoutCalendar } from './WorkoutCalendar'
 
 /** POST /api/workouts のモックが返す id。 */

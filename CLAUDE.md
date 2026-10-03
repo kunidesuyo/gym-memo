@@ -20,9 +20,23 @@
 ```
 apps/api   Hono + Drizzle + D1     Worker のエントリ
 apps/web   React + Vite + TanStack  SPA
-infra      Terraform（フェーズ2で作る。まだ空）
+infra      Terraform（Access とゾーン設定のみ）
 docs       design-notes.md
 ```
+
+`apps/web/src` は **feature 単位**（32章）。
+
+```
+api/        client.ts / keys.ts / error.ts   ← feature を知らない
+features/
+  exercises/  api.ts + 画面・部品 + テスト
+  workouts/   api.ts + 画面・部品 + テスト（セットも含む）
+components/   ui/（shadcn）と、両 feature から使う部品だけ
+routes/       薄いラッパー。ロジックは features にある
+```
+
+⚠️ **依存は `workouts → exercises` の一方向だけ**（種目の選択肢が要るため）。
+逆向きを作らないこと。`components/` と `api/` から `features/` を参照しないこと。
 
 ## コマンド
 
@@ -71,6 +85,11 @@ web が型解決するのはこのファイルだけ（`api/routes` として ex
 
 **`InferResponseType` には必ず `, 200` を付ける**
 付けないと 400 のエラー型とのユニオンになる。型の定義は `apps/web/src/api/hooks.ts` に集約。
+
+**`api/keys.ts` を feature ごとに分けない**
+「階層 = 無効化の単位」で設計してあり、**feature を跨いだ関係**が入っている
+（`['exercises']` を invalidate すると `['exercises', id, 'last-sets']` も巻き込む。
+種目名を変えたとき記録画面の表示も追従させるため）。分けるとこの関係が見えなくなる。
 
 **`mutateAsync` を await した後に `mutation.isError` を見ない**
 レンダー時点の古い値を掴んでいる。`try` / `catch` で Promise の結果から判断する。

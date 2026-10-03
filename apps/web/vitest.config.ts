@@ -5,7 +5,11 @@ import { defineConfig } from 'vitest/config'
 export default defineConfig({
   plugins: [react()],
   resolve: {
-    alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
+    // tsconfig.json の paths と対。test/ は src/ の外なので別名が要る。
+    alias: {
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+      '@test': fileURLToPath(new URL('./test', import.meta.url)),
+    },
   },
   test: {
     environment: 'jsdom',
