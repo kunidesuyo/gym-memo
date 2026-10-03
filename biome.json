@@ -19,7 +19,18 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "preset": "recommended"
+      "preset": "recommended",
+      "style": {
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "paths": {
+              "@hono/zod-validator": "./validator の zValidator を使う。素のままだと 400 の body が { error: ZodError } になり、画面に [object Object] が出る",
+              "react-hook-form": "TanStack Form と競合する。shadcn の form コンポーネントも入れないこと（20章）"
+            }
+          }
+        }
+      }
     }
   },
   "javascript": {
@@ -27,5 +38,77 @@
       "quoteStyle": "single",
       "semicolons": "asNeeded"
     }
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["apps/api/src/validator.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["apps/api/src/schema/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["drizzle-orm", "drizzle-orm/**", "**/db/**"],
+                    "message": "schema/ は web からも import する共有領域。Drizzle / D1 を混ぜるとサーバーコードがフロントのバンドルに入る"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["apps/web/src/features/exercises/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["**/features/workouts/**"],
+                    "message": "feature の依存は workouts → exercises の一方向だけ（32章）。逆向きを作らないこと"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["apps/web/src/components/**", "apps/web/src/api/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["**/features/**"],
+                    "message": "components/ と api/ は features を知らない（32章）。共有側から feature を参照しないこと"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
 }
