@@ -7,7 +7,7 @@
 - **`biome.json`** — 機械で止められる規約（`noRestrictedImports` に理由つきで入っている）
 - **`.claude/skills/`** — 手順。読むタイミングが決まっているもの（`deploy`）
 - **コードの `⚠️` コメント** — そのコードを触る瞬間だけ要るもの
-- **`docs/design-notes.md`** — **なぜ**そうなっているか。代案と落とし穴（32章）
+- **`docs/design-notes/`** — **なぜ**そうなっているか。代案と落とし穴（1章 = 1ファイル。目次は README）
 - **このファイル** — 上のどれでもない「破ると壊れる一行」、地図、コマンド
 
 ⚠️ 規約を増やすときは、まず **lint で止められないか**を考える。止められるなら
@@ -29,7 +29,7 @@
 apps/api   Hono + Drizzle + D1     Worker のエントリ
 apps/web   React + Vite + TanStack  SPA
 infra      Terraform（Access とゾーン設定のみ）
-docs       design-notes.md
+docs       design-notes/（1章 = 1ファイル。目次は README.md）
 ```
 
 `apps/web/src` は **feature 単位**（32章）。
@@ -109,7 +109,8 @@ UTC なので JST の午前9時前が前日になる。ローカル時刻から�
 
 ## 意図的にそうしているもの（直さないこと）
 
-「なぜ」は `docs/design-notes.md` の該当章にある。ここは**戻すと壊れる一行**だけ。
+「なぜ」は `docs/design-notes/` の該当章にある（`NN-` で始まるファイル）。
+ここは**戻すと壊れる一行**だけ。
 
 - **主キーは UUIDv7**。`id` をソートのタイブレーカーに使っている（17章）
 - **重量は DB にグラム整数（`sets.weight_g`）、API は kg**。変換は `db/weight.ts` に閉じる。

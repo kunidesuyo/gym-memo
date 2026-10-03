@@ -1,7 +1,8 @@
 # infra —— Cloudflare「アカウント」側の管理
 
 > **Terraform はアカウントを管理する。Wrangler はアプリケーションを管理する。**
-> 境界線の根拠は `docs/design-notes.md` 5章、デプロイの実録は 29章。
+> 境界線の根拠は `docs/design-notes/05-terraform-scope.md`、
+> デプロイの実録は `29-phase2-deploy.md`。
 
 ## ここで管理しているもの
 
@@ -23,7 +24,7 @@
 ### 手動で設定してある前提条件
 
 ⚠️ **作り直すときはこの値を再現すること。**どちらも一度 Terraform で書いてから外した
-（経緯は `docs/design-notes.md` 29章）。
+（経緯は `docs/design-notes/29-phase2-deploy.md`）。
 
 **Zero Trust 組織** — ダッシュボード（https://one.dash.cloudflare.com）
 
