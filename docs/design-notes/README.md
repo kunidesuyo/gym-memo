@@ -19,6 +19,7 @@
 | メインセットの判定規則（懸垂の例外） | [28章](28-main-sets.md) |
 | 種目の並び / `display_order` に UNIQUE を張らない理由 | [31章](31-exercise-display-order.md) |
 | フロントの feature 構成と依存の向き | [32章](32-feature-folders.md) |
+| テストをどのファイルに書くか | [34章](34-api-structure.md) |
 | 規約をどこに書くか | [33章](33-convention-placement.md) |
 | バックログ（画像/R2、グラフ、PR、オフライン） | [15章](15-requirements-mvp.md) |
 
@@ -46,6 +47,7 @@
 - [31. 種目の並びを手動指定にする](31-exercise-display-order.md) — ⚠️ UNIQUE を張らない / 既定 999
 - [32. フロントを feature 単位に切る](32-feature-folders.md) — ⚠️ 依存は workouts → exercises の一方向
 - [33. 規約の置き場所を分ける](33-convention-placement.md) — lint / スキル / コメント / design-notes の分担
+- [34. api の整理](34-api-structure.md) — クエリのドメイン分割、テストの同居、移行コードの隔離
 
 ## フェーズ1 の実装ログ
 

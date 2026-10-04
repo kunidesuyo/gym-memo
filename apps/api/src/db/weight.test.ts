@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { toG, toKg } from '../src/db/weight'
+import { toG, toKg } from './weight'
 
 describe('重量の kg ↔ g 変換', () => {
   it('小数1桁が往復する', () => {

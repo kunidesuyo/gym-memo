@@ -26,7 +26,7 @@
 コードは分離、デプロイは1つ。型は Hono RPC で `apps/api` → `apps/web` に貫通する。
 
 ```
-apps/api   Hono + Drizzle + D1     Worker のエントリ
+apps/api   Hono + Drizzle + D1     Worker のエントリ。migration/ は一度きりの移行コード
 apps/web   React + Vite + TanStack  SPA
 infra      Terraform（Access とゾーン設定のみ）
 docs       design-notes/（1章 = 1ファイル。目次は README.md）
@@ -100,6 +100,11 @@ web が型解決するのはこのファイルだけ（Worker エントリの `i
 UTC なので JST の午前9時前が前日になる。ローカル時刻から組む（`dateKey`）。
 
 **`wrangler d1` に `--local` を忘れない**。付けないと本番に流れる
+
+**テストは対象の隣に置く。`test/` には置かない**
+`test/` は共通部品だけ（`helpers.ts` / `setup.ts`）。api も web も同居方式（34章）。
+HTTP 層のテストは `routes.ts` が分割できないので **`src/routes.<リソース>.test.ts`**
+に置く。どのファイルかは**パスの先頭で決まる**（`/api/exercises/...` → `routes.exercises`）。
 
 **テストのストレージ分離は「テストファイル単位」**
 同一ファイル内は D1 の状態を共有する。`beforeEach` で `resetDb()`。

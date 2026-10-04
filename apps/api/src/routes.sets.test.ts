@@ -1,29 +1,21 @@
-import { exports } from 'cloudflare:workers'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { addSet } from '../src/db/queries/set'
-import { createWorkout, getWorkout } from '../src/db/queries/workout'
-import { sets } from '../src/db/schema'
-import { resetDb, seedExercises, testDb } from './helpers'
+import {
+  MISSING_ID,
+  resetDb,
+  seedExercises,
+  send,
+  testDb,
+} from '../test/helpers'
+import { addSet } from './db/queries/set'
+import { createWorkout, getWorkout } from './db/queries/workout'
 
-const BASE = 'https://example.com'
-
-/** 形式は正しいが存在しない UUID。404 の確認に使う。 */
-const MISSING_ID = '01a0bf17-0000-7000-8000-000000000000'
-
+/** `/api/sets` 以下のルート。作成は `/api/workouts/:id/sets` なので workouts 側。 */
 let benchId: string
 
 beforeEach(async () => {
   await resetDb()
   benchId = (await seedExercises()).bench.id
 })
-
-function send(method: string, path: string, body?: unknown) {
-  return exports.default.fetch(`${BASE}${path}`, {
-    method,
-    headers: { 'content-type': 'application/json' },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  })
-}
 
 async function threeSets() {
   const db = testDb()
@@ -115,44 +107,6 @@ describe('DELETE /api/sets/:id', () => {
   it('存在しない ID は 404', async () => {
     const res = await send('DELETE', `/api/sets/${MISSING_ID}`)
     expect(res.status).toBe(404)
-  })
-})
-
-describe('DELETE /api/workouts/:id', () => {
-  it('セッションを消すとぶら下がるセットも消える（FK の CASCADE）', async () => {
-    const { workout } = await threeSets()
-
-    const res = await send('DELETE', `/api/workouts/${workout.id}`)
-    expect(res.status).toBe(204)
-
-    expect(await getWorkout(testDb(), workout.id)).toBeNull()
-    expect(await testDb().select().from(sets)).toHaveLength(0)
-  })
-
-  it('存在しない ID は 404', async () => {
-    const res = await send('DELETE', `/api/workouts/${MISSING_ID}`)
-    expect(res.status).toBe(404)
-  })
-})
-
-describe('onError（未捕捉の例外）', () => {
-  it('DB の制約違反は 500 と { error: string } になる', async () => {
-    const db = testDb()
-    const w = await createWorkout(db, '2026-09-21')
-
-    // 形式は正しいが存在しない種目 ID → 外部キー制約違反で例外が飛ぶ。
-    // onError が無いと Hono 既定のプレーンテキスト 500 になる。
-    const res = await send('POST', `/api/workouts/${w.id}/sets`, {
-      exerciseId: MISSING_ID,
-      weightKg: 60,
-      reps: 10,
-    })
-
-    expect(res.status).toBe(500)
-    const body = (await res.json()) as { error: string }
-    expect(typeof body.error).toBe('string')
-    // 内部のエラー文言をそのまま漏らさない
-    expect(body.error).not.toMatch(/FOREIGN KEY|SQLITE|constraint/i)
   })
 })
 

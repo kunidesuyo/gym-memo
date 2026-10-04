@@ -1,6 +1,23 @@
-import { env } from 'cloudflare:workers'
+import { env, exports } from 'cloudflare:workers'
 import { createDb } from '../src/db'
 import { exercises, sets, workouts } from '../src/db/schema'
+
+/** 形式は正しいが存在しない UUID。404 の確認に使う。 */
+export const MISSING_ID = '01a0bf17-0000-7000-8000-000000000000'
+
+export const BASE = 'https://example.com'
+
+/** Worker を直接 fetch する。HTTP 層を通すテストはこれを使う。 */
+export function send(method: string, path: string, body?: unknown) {
+  return exports.default.fetch(`${BASE}${path}`, {
+    method,
+    headers: { 'content-type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  })
+}
+
+export const get = (path: string) => send('GET', path)
+export const post = (path: string, body: unknown) => send('POST', path, body)
 
 export function testDb() {
   return createDb(env.DB)

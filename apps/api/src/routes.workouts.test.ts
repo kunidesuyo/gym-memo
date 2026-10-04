@@ -1,36 +1,46 @@
 import { exports } from 'cloudflare:workers'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { resetDb, seedExercises } from './helpers'
+import {
+  BASE,
+  MISSING_ID,
+  post,
+  resetDb,
+  seedExercises,
+  send,
+  testDb,
+} from '../test/helpers'
+import { addSet } from './db/queries/set'
+import { createWorkout, getWorkout } from './db/queries/workout'
+import { sets } from './db/schema'
 
-/** 形式は正しいが存在しない UUID。404 の確認に使う。 */
-const MISSING_ID = '01a0bf17-0000-7000-8000-000000000000'
-
-const BASE = 'https://example.com'
-
+/** `/api/workouts` 以下のルート（ぶら下がる sets もここ）。 */
 let benchId: string
 
 beforeEach(async () => {
   await resetDb()
-  const { bench } = await seedExercises()
-  benchId = bench.id
+  benchId = (await seedExercises()).bench.id
 })
 
-function post(path: string, body: unknown) {
-  return exports.default.fetch(`${BASE}${path}`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(body),
+async function threeSets() {
+  const db = testDb()
+  const w = await createWorkout(db, '2026-09-20')
+  const a = await addSet(db, w.id, {
+    exerciseId: benchId,
+    weightKg: 60,
+    reps: 10,
   })
+  const b = await addSet(db, w.id, {
+    exerciseId: benchId,
+    weightKg: 65,
+    reps: 8,
+  })
+  const c = await addSet(db, w.id, {
+    exerciseId: benchId,
+    weightKg: 70,
+    reps: 5,
+  })
+  return { workout: w, a, b, c }
 }
-
-describe('GET /api/exercises', () => {
-  it('種目一覧を返す', async () => {
-    const res = await exports.default.fetch(`${BASE}/api/exercises`)
-    expect(res.status).toBe(200)
-    const rows = (await res.json()) as { name: string }[]
-    expect(rows.map((r) => r.name)).toContain('ベンチプレス')
-  })
-})
 
 describe('POST /api/workouts', () => {
   it('セッションを作成して 201 を返す', async () => {
@@ -180,41 +190,6 @@ describe('POST /api/workouts/:id/sets', () => {
   })
 })
 
-describe('GET /api/exercises/:id/last-sets', () => {
-  it('記録がなければ null', async () => {
-    const res = await exports.default.fetch(
-      `${BASE}/api/exercises/${benchId}/last-sets`,
-    )
-    expect(res.status).toBe(200)
-    await expect(res.json()).resolves.toBeNull()
-  })
-
-  it('excludeWorkoutId で記録中のセッションを除外できる', async () => {
-    const prev = await post('/api/workouts', { performedOn: '2026-09-10' })
-    const prevId = ((await prev.json()) as { id: string }).id
-    await post(`/api/workouts/${prevId}/sets`, {
-      exerciseId: benchId,
-      weightKg: 50,
-      reps: 10,
-    })
-
-    const today = await post('/api/workouts', { performedOn: '2026-09-20' })
-    const todayId = ((await today.json()) as { id: string }).id
-    await post(`/api/workouts/${todayId}/sets`, {
-      exerciseId: benchId,
-      weightKg: 60,
-      reps: 10,
-    })
-
-    const res = await exports.default.fetch(
-      `${BASE}/api/exercises/${benchId}/last-sets?excludeWorkoutId=${todayId}`,
-    )
-    await expect(res.json()).resolves.toMatchObject({
-      performedOn: '2026-09-10',
-    })
-  })
-})
-
 describe('POST /api/workouts/:id/sets/copy-last', () => {
   /** 前回のセッションを作り、ベンチのセットを3本入れる。 */
   async function seedPrevious() {
@@ -354,5 +329,22 @@ describe('POST /api/workouts/:id/sets/copy-last', () => {
       exerciseId: 'not-a-uuid',
     })
     expect(res.status).toBe(400)
+  })
+})
+
+describe('DELETE /api/workouts/:id', () => {
+  it('セッションを消すとぶら下がるセットも消える（FK の CASCADE）', async () => {
+    const { workout } = await threeSets()
+
+    const res = await send('DELETE', `/api/workouts/${workout.id}`)
+    expect(res.status).toBe(204)
+
+    expect(await getWorkout(testDb(), workout.id)).toBeNull()
+    expect(await testDb().select().from(sets)).toHaveLength(0)
+  })
+
+  it('存在しない ID は 404', async () => {
+    const res = await send('DELETE', `/api/workouts/${MISSING_ID}`)
+    expect(res.status).toBe(404)
   })
 })
