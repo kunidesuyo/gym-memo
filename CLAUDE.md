@@ -67,6 +67,23 @@ pnpm types            # wrangler types 再生成（wrangler.jsonc を変えた�
 本番に触るコマンド（`pnpm run deploy` / `db:migrate:remote` / `--remote`）は
 **`deploy` スキル**に手順ごとまとめてある。単体で打たないこと。
 
+## 変更の流し方
+
+⚠️ **main に直接コミットしない。ブランチを切って PR を作る。**
+リモートは `kunidesuyo/gym-memo`（private）。
+
+```bash
+git switch -c feature/xxx        # feature / fix / refactor / docs / chore
+# 区切りごとにコミット（確認は取らなくてよい）
+pnpm -r typecheck && pnpm test && pnpm check
+git push -u origin feature/xxx
+gh pr create --base main --title "..." --body-file <file>
+```
+
+- PR 本文は「何を」より **なぜ** と、踏んだ落とし穴を書く
+- **マージは本人の判断。**こちらから勝手に merge しない
+- 差分を見るには `hunk show <ref> --mode split`（ターミナルの diff ビューア）
+
 ## 守るべき規約
 
 破ると壊れるものだけ。**lint で止まるものはここに書かない**（`biome.json` の
