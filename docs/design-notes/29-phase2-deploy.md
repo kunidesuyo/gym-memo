@@ -10,7 +10,7 @@ MVP を本番に載せ、Cloudflare Access で自分だけがアクセスでき�
   │  ① TLS（min_tls_version 1.2 / http は 301 で https へ）   ← 手動
   ▼
 Cloudflare エッジ
-  │  ② Access の検問（kunidesuyo1234@gmail.com のみ / 30日）    ← Terraform
+  │  ② Access の検問（許可したメールアドレス1件のみ / 30日）     ← Terraform
   ▼
 Worker gym-memo                                              ← Wrangler
   ├─ /api/*  → Hono → Drizzle → D1 gym-memo (APAC)            ← Wrangler

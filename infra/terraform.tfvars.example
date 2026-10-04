@@ -5,7 +5,11 @@
 #    実行時に環境変数で渡す:
 #      CLOUDFLARE_API_TOKEN="$(security find-generic-password -s cloudflare-terraform -w)" terraform plan
 
-account_id    = "6cb6e5b05fb1311326595ee53b355a74"
+# account_id は `npx wrangler whoami` で出る。
+# ID 自体は機密ではない（API トークンが無いと何もできず、トークンがあれば
+# wrangler d1 list / whoami で自力で引ける）が、.example は見本なので
+# 実値は入れずコピー先の terraform.tfvars にだけ書く。
+account_id    = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 allowed_email = "you@example.com"
 
 # 以下は variables.tf に既定値があるので、変えたいときだけ書く
