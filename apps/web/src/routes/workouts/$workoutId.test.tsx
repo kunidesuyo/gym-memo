@@ -63,6 +63,44 @@ describe('/workouts/$workoutId の loader', () => {
     })
   })
 
+  it("キャッシュがあれば loader は取りに行かない（staleTime: 'static'）", async () => {
+    let calls = 0
+    server.use(
+      http.get('/api/workouts/:id', () => {
+        calls++
+        return HttpResponse.json(workoutFixture)
+      }),
+    )
+
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    })
+    // あらかじめキャッシュに入れておく
+    queryClient.setQueryData(['workouts', WORKOUT_ID], workoutFixture)
+
+    const router = createRouter({
+      routeTree,
+      context: { queryClient },
+      history: createMemoryHistory({
+        initialEntries: [`/workouts/${WORKOUT_ID}`],
+      }),
+    })
+    render(
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>,
+    )
+    await screen.findByText('2026-09-20')
+    await new Promise((resolve) => setTimeout(resolve, 60))
+
+    // ⚠️ 1回は画面側の useQuery（既定 staleTime: 0）による取り直し。
+    //    loader からも取ると 2 になる。`staleTime: 'static'` を外すと落ちる。
+    expect(calls).toBe(1)
+  })
+
   it('取得に失敗しても画面は落ちない', async () => {
     server.use(
       http.get('/api/workouts/:id', () =>
