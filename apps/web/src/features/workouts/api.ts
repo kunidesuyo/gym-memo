@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  queryOptions,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query'
 import type { SetInput } from 'api/schema/set'
 import type { InferResponseType } from 'hono/client'
 import { client } from '@/api/client'
@@ -34,15 +39,27 @@ export function useWorkouts() {
   })
 }
 
-export function useWorkout(id: string) {
-  return useQuery({
+/**
+ * セッション1件。**loader とコンポーネントで同じ定義を共有する**ため
+ * queryOptions に切り出してある。
+ *
+ * ルート側が loader で `ensureQueryData(workoutQueryOptions(id))` を呼ぶので、
+ * コンポーネントがマウントする時点でキャッシュに入っている。
+ * キャッシュの持ち主は Query だけ（Router 側の loader キャッシュは使わない）。
+ */
+export function workoutQueryOptions(id: string) {
+  return queryOptions({
     queryKey: keys.workout(id),
     queryFn: async () => {
       const res = await client.api.workouts[':id'].$get({ param: { id } })
-      if (!res.ok) throw new Error('セッションの取得に失敗しました')
+      if (!res.ok) throw await errorFrom(res, 'セッションの取得に失敗しました')
       return res.json()
     },
   })
+}
+
+export function useWorkout(id: string) {
+  return useQuery(workoutQueryOptions(id))
 }
 
 export function useLastSets(exerciseId: string, excludeWorkoutId: string) {

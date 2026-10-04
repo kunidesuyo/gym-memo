@@ -17,7 +17,10 @@ syncTheme()
 darkMedia.addEventListener('change', syncTheme)
 
 const queryClient = new QueryClient()
-const router = createRouter({ routeTree })
+
+// loader から queryClient を使うのでコンテキストに渡す（型は __root.tsx の RouterContext）。
+// キャッシュの持ち主は Query だけにする。Router 側の loader キャッシュは使わない。
+const router = createRouter({ routeTree, context: { queryClient } })
 
 declare module '@tanstack/react-router' {
   interface Register {
