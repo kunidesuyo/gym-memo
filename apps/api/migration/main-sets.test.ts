@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { MAIN_SET_OVERRIDES } from '../scripts/main-set-overrides'
-import { type MainSetInput, markMainSets } from '../scripts/main-sets'
+import { MAIN_SET_OVERRIDES } from './main-set-overrides'
+import { type MainSetInput, markMainSets } from './main-sets'
 
 /**
  * 移行データのメインセット初期値。ユーザーと確定した規則（design-notes 28章）。

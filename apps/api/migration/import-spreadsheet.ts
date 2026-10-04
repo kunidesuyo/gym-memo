@@ -1,7 +1,7 @@
 /**
  * スプレッドシート（CSV）から D1 に流す SQL を生成する。
  *
- *   node apps/api/scripts/import-spreadsheet.ts <csv> [出力先.sql]
+ *   node apps/api/migration/import-spreadsheet.ts <csv> [出力先.sql]
  *
  * 一度きりの移行スクリプト。生成した SQL を目視確認してから
  *   wrangler d1 execute gym-memo --local --file=tmp/import.sql

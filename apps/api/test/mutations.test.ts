@@ -1,6 +1,7 @@
 import { exports } from 'cloudflare:workers'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { addSet, createWorkout, getWorkout } from '../src/db/queries'
+import { addSet } from '../src/db/queries/set'
+import { createWorkout, getWorkout } from '../src/db/queries/workout'
 import { sets } from '../src/db/schema'
 import { resetDb, seedExercises, testDb } from './helpers'
 

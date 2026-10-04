@@ -1,24 +1,28 @@
 import { Hono } from 'hono'
 import { createDb } from './db'
 import {
-  addSet,
-  copyLastSets,
   countSetsForExercise,
   createExercise,
-  createWorkout,
   deleteExercise,
-  deleteSet,
-  deleteWorkout,
-  findWorkoutByDate,
   getExercise,
   getExerciseHistory,
-  getLastSets,
-  getWorkout,
   listExercises,
-  listWorkouts,
   updateExercise,
+} from './db/queries/exercise'
+import {
+  addSet,
+  copyLastSets,
+  deleteSet,
+  getLastSets,
   updateSet,
-} from './db/queries'
+} from './db/queries/set'
+import {
+  createWorkout,
+  deleteWorkout,
+  findWorkoutByDate,
+  getWorkout,
+  listWorkouts,
+} from './db/queries/workout'
 import { idParamSchema } from './schema/common'
 import { exerciseQuerySchema, newExerciseSchema } from './schema/exercise'
 import {

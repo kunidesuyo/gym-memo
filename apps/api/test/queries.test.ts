@@ -1,10 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import {
-  addSet,
-  createWorkout,
-  getLastSets,
-  getWorkout,
-} from '../src/db/queries'
+import { addSet, getLastSets } from '../src/db/queries/set'
+import { createWorkout, getWorkout } from '../src/db/queries/workout'
 import { resetDb, seedExercises, testDb } from './helpers'
 
 /** 形式は正しいが存在しない UUID。404 の確認に使う。 */

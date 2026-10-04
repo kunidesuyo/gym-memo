@@ -8,6 +8,7 @@
   "include": [
     "src",
     "test",
+    "migration",
     "vitest.config.ts",
     "../../worker-configuration.d.ts"
   ]

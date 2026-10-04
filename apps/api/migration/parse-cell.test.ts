@@ -5,7 +5,7 @@ import {
   normalizeCell,
   parseSpec,
   splitToken,
-} from '../scripts/parse-cell'
+} from './parse-cell'
 
 /**
  * スプレッドシート移行のセルパーサ。
