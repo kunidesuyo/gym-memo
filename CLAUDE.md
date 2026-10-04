@@ -73,10 +73,10 @@ pnpm types            # wrangler types 再生成（wrangler.jsonc を変えた�
 リモートは `kunidesuyo/gym-memo`（private）。
 
 ```bash
-git switch -c feat/xxx           # feat / fix / refactor / docs / chore
+git switch -c feature/xxx        # feature / fix / refactor / docs / chore
 # 区切りごとにコミット（確認は取らなくてよい）
 pnpm -r typecheck && pnpm test && pnpm check
-git push -u origin feat/xxx
+git push -u origin feature/xxx
 gh pr create --base main --title "..." --body-file <file>
 ```
 
