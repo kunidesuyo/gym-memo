@@ -8,15 +8,25 @@ export const Route = createFileRoute('/workouts/$workoutId')({
    * 遷移と同時に取得を始める。マウントを待たないので、コンポーネントが描かれる
    * 時点でキャッシュに入っている（= 画面側の `isPending` は通らない）。
    *
-   * ⚠️ **`staleTime: 'static'` が要る。** これが「キャッシュにあれば取得しない」の
-   *    意味で、付けないと毎回ネットワークに行く。
+   * ⚠️ **`staleTime: 'static'` が要る。** 「キャッシュにあれば取りに行かない」の
+   *    意味で、付けないと毎回ネットワークを待つ（= 遷移が毎回遅くなる）。
+   *    鮮度の面倒は画面側の `useSuspenseQuery` が見る（下記）。
    *    `ensureQueryData` / `fetchQuery` は**どちらも deprecated**（次のメジャーで削除）。
    *    `query()` がその2つを置き換え、`staleTime: 'static'` の有無で使い分ける。
    * ⚠️ `query()` は既定で `retry: false`（コンポーネントが居ないので再描画で
-   *    拾い直せない）。画面の `useQuery` 側の retry とは別物。
-   * ⚠️ Router 自身も loader の結果をキャッシュするが、ここでは**使わない**。
-   *    `useLoaderData` ではなく画面側の `useWorkout` から読むので、
-   *    キャッシュの持ち主は Query だけ。二重管理にならない。
+   *    拾い直せない）。画面側の retry とは別物。
+   *
+   * 役割分担:
+   *   loader                「描く前にデータが在る」ことを保証する。取り直さない
+   *   useSuspenseQuery      鮮度を見る。`staleTime` が最低1秒に切り上げられるので、
+   *                         1秒以上経っていればマウント時に裏で取り直す（実測）
+   *
+   * ⚠️ Router も loader の戻り値を保存しているが、`useLoaderData` を使わないので
+   *    **誰も読まない**。Router のキャッシュが効くのは「loader を走らせるか」の
+   *    判断だけで、遷移時は Router の `staleTime` 既定 0 なので毎回走る。
+   *    飛ばすのは **preload を30秒以内に繰り返したときだけ**（実測で確認）。
+   *    先読み（`defaultPreload`）を入れるなら、公式が推奨する
+   *    `defaultPreloadStaleTime: 0` も併せて検討する。
    */
   loader: ({ context: { queryClient }, params: { workoutId } }) =>
     queryClient.query({

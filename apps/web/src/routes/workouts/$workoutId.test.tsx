@@ -98,9 +98,11 @@ describe('/workouts/$workoutId の loader', () => {
     await new Promise((resolve) => setTimeout(resolve, 60))
 
     // ⚠️ **1回も取りに行かない。**
-    //    loader は staleTime: 'static' でキャッシュを使い、画面側の
-    //    useSuspenseQuery も `suspense: true` を強制するためマウント時に
-    //    取り直さない（useQuery のままだと既定 staleTime: 0 で1回走っていた）。
+    //    loader は staleTime: 'static' でキャッシュを使う。画面側の
+    //    useSuspenseQuery は staleTime が最低1秒に切り上げられるので、
+    //    入れた直後のキャッシュは新鮮扱いで取り直さない
+    //    （useQuery のままだと既定 staleTime: 0 で1回走っていた）。
+    //    ⚠️ 1秒以上経ったキャッシュなら 1 になる。ここは「直後」の確認。
     //    `staleTime: 'static'` を外すと loader が取りに行って 1 になる。
     expect(calls).toBe(0)
   })

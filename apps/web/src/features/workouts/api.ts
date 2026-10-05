@@ -71,6 +71,11 @@ export function workoutQueryOptions(id: string) {
  * ⚠️ `useSuspenseQuery` は `enabled` / `throwOnError` / `placeholderData` を
  *    受け付けない（型定義で OmitKeyof されている）。条件付きで取得したいクエリは
  *    `useQuery` のまま残すこと（`useLastSets` がそれ）。
+ * ⚠️ **`staleTime` は最低1秒に切り上げられる**（`suspense.js` の
+ *    `MIN_SUSPENSE_TIME_MS`）。渡さなければ1秒。つまり
+ *      1秒以内 → マウントしても取り直さない
+ *      1秒以上 → マウント時に裏で取り直す
+ *    loader が `staleTime: 'static'` で取り直さないぶんの鮮度はここが見ている。
  */
 export function useWorkout(id: string) {
   return useSuspenseQuery(workoutQueryOptions(id))
