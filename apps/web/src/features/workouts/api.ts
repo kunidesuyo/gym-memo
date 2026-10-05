@@ -44,10 +44,9 @@ export function useWorkouts() {
  * セッション1件。**loader とコンポーネントで同じ定義を共有する**ため
  * queryOptions に切り出してある。
  *
- * ルート側が loader で `query({ ...workoutQueryOptions(id), staleTime: 'static' })` を
- * 呼ぶので、
- * コンポーネントがマウントする時点でキャッシュに入っている。
- * キャッシュの持ち主は Query だけ（Router 側の loader キャッシュは使わない）。
+ * ルート側が loader で `query({ ...workoutQueryOptions(id), staleTime: 'static' })`
+ * を呼ぶので、コンポーネントがマウントする時点でキャッシュに入っている。
+ * 読み出しは Query のキャッシュだけから行う（`useLoaderData` は使わない）。
  */
 export function workoutQueryOptions(id: string) {
   return queryOptions({
