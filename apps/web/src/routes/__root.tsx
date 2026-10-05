@@ -5,13 +5,7 @@ import {
   Outlet,
 } from '@tanstack/react-router'
 
-/**
- * ルータのコンテキスト。loader から Query のキャッシュを触るために渡している。
- *
- * ⚠️ `createRootRouteWithContext<T>()` は**ファクトリ**。`()` を2回呼ぶこと
- *    （`createRootRouteWithContext<T>()({...})`）。1つ落とすのが定番のミス。
- * ⚠️ 値は main.tsx の `createRouter({ context })` で渡す。ここは型だけ。
- */
+/** loader はフックを呼べないので、queryClient はコンテキストで渡す。 */
 export type RouterContext = { queryClient: QueryClient }
 
 export const Route = createRootRouteWithContext<RouterContext>()({

@@ -18,10 +18,6 @@ darkMedia.addEventListener('change', syncTheme)
 
 const queryClient = new QueryClient()
 
-// loader から queryClient を使うのでコンテキストに渡す（型は __root.tsx の RouterContext）。
-// 読み出しは Query のキャッシュだけから行う（useLoaderData は使わない）。
-// Router も loader の戻り値を保存しているが誰も読まない。詳細は
-// routes/workouts/$workoutId.tsx のコメント。
 const router = createRouter({ routeTree, context: { queryClient } })
 
 declare module '@tanstack/react-router' {

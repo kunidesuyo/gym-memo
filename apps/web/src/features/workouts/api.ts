@@ -40,14 +40,7 @@ export function useWorkouts() {
   })
 }
 
-/**
- * セッション1件。**loader とコンポーネントで同じ定義を共有する**ため
- * queryOptions に切り出してある。
- *
- * ルート側が loader で `query({ ...workoutQueryOptions(id), staleTime: 'static' })`
- * を呼ぶので、コンポーネントがマウントする時点でキャッシュに入っている。
- * 読み出しは Query のキャッシュだけから行う（`useLoaderData` は使わない）。
- */
+/** loader と画面で同じキャッシュを指すため、各所にインラインで書かない。 */
 export function workoutQueryOptions(id: string) {
   return queryOptions({
     queryKey: keys.workout(id),
@@ -59,27 +52,12 @@ export function workoutQueryOptions(id: string) {
   })
 }
 
-/**
- * セッション1件を読む。**`data` は undefined にならない。**
- *
- * ルート側の loader が同じ queryOptions でキャッシュを温めているので、
- * 実際にはここで待つことはない（= サスペンドしない）。
- *
- * ⚠️ 失敗は throw される。受け止めるのはルートの `errorComponent`。
- *    画面側で `error` を見る分岐は不要（あっても到達しない）。
- * ⚠️ `useSuspenseQuery` は `enabled` / `throwOnError` / `placeholderData` を
- *    受け付けない（型定義で OmitKeyof されている）。条件付きで取得したいクエリは
- *    `useQuery` のまま残すこと（`useLastSets` がそれ）。
- * ⚠️ **`staleTime` は最低1秒に切り上げられる**（`suspense.js` の
- *    `MIN_SUSPENSE_TIME_MS`）。渡さなければ1秒。つまり
- *      1秒以内 → マウントしても取り直さない
- *      1秒以上 → マウント時に裏で取り直す
- *    loader が `staleTime: 'static'` で取り直さないぶんの鮮度はここが見ている。
- */
+/** loader が先に埋めるので useQuery にしない（data が undefined にならない）。 */
 export function useWorkout(id: string) {
   return useSuspenseQuery(workoutQueryOptions(id))
 }
 
+// 種目を選ぶまで叩かない。`enabled` が要るので useSuspenseQuery には寄せられない
 export function useLastSets(exerciseId: string, excludeWorkoutId: string) {
   return useQuery({
     queryKey: keys.lastSets(exerciseId, excludeWorkoutId),

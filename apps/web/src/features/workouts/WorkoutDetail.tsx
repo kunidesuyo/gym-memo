@@ -69,8 +69,7 @@ export function WorkoutDetail({ workoutId }: { workoutId: string }) {
   const deleteSet = useDeleteSet(workoutId)
   const deleteWorkout = useDeleteWorkout()
 
-  // ローディングとエラーの分岐は無い。loader が取り終えてから描かれ、
-  // 失敗はルートの errorComponent が受け止める（useSuspenseQuery が throw する）。
+  // isPending / error を見ない。loader が取り終えてから描かれ、失敗はルートに行く
   const groups = groupByExercise(workout.data.sets)
   // 並びはサーバーが分割順にしているので、絞るだけでその他が末尾に残る
   const visible = (exercises.data ?? []).filter((e) => inSplit(e, split))
