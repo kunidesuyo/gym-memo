@@ -1,4 +1,10 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  queryOptions,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  useSuspenseQuery,
+} from '@tanstack/react-query'
 import type { SetInput } from 'api/schema/set'
 import type { InferResponseType } from 'hono/client'
 import { client } from '@/api/client'
@@ -34,17 +40,24 @@ export function useWorkouts() {
   })
 }
 
-export function useWorkout(id: string) {
-  return useQuery({
+/** loader と画面で同じキャッシュを指すため、各所にインラインで書かない。 */
+export function workoutQueryOptions(id: string) {
+  return queryOptions({
     queryKey: keys.workout(id),
     queryFn: async () => {
       const res = await client.api.workouts[':id'].$get({ param: { id } })
-      if (!res.ok) throw new Error('セッションの取得に失敗しました')
+      if (!res.ok) throw await errorFrom(res, 'セッションの取得に失敗しました')
       return res.json()
     },
   })
 }
 
+/** loader が先に埋めるので useQuery にしない（data が undefined にならない）。 */
+export function useWorkout(id: string) {
+  return useSuspenseQuery(workoutQueryOptions(id))
+}
+
+// 種目を選ぶまで叩かない。`enabled` が要るので useSuspenseQuery には寄せられない
 export function useLastSets(exerciseId: string, excludeWorkoutId: string) {
   return useQuery({
     queryKey: keys.lastSets(exerciseId, excludeWorkoutId),

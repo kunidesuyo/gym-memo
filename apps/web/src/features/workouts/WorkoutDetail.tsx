@@ -69,15 +69,8 @@ export function WorkoutDetail({ workoutId }: { workoutId: string }) {
   const deleteSet = useDeleteSet(workoutId)
   const deleteWorkout = useDeleteWorkout()
 
-  if (workout.isPending) return <p>読み込み中...</p>
-  if (workout.error)
-    return (
-      <p role="alert" className="text-destructive">
-        {workout.error.message}
-      </p>
-    )
-
-  const groups = groupByExercise(workout.data?.sets ?? [])
+  // isPending / error を見ない。loader が取り終えてから描かれ、失敗はルートに行く
+  const groups = groupByExercise(workout.data.sets)
   // 並びはサーバーが分割順にしているので、絞るだけでその他が末尾に残る
   const visible = (exercises.data ?? []).filter((e) => inSplit(e, split))
 
@@ -96,7 +89,7 @@ export function WorkoutDetail({ workoutId }: { workoutId: string }) {
     <div className="flex flex-col gap-4">
       <header className="flex items-center justify-between">
         <h1 className="font-bold text-xl tabular-nums">
-          {workout.data?.performedOn}
+          {workout.data.performedOn}
         </h1>
         {confirmingDelete ? (
           <span className="flex items-center gap-2 text-sm">

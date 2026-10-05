@@ -20,6 +20,7 @@
 | 種目の並び / `display_order` に UNIQUE を張らない理由 | [31章](31-exercise-display-order.md) |
 | フロントの feature 構成と依存の向き | [32章](32-feature-folders.md) |
 | テストをどのファイルに書くか | [34章](34-api-structure.md) |
+| loader と Query のキャッシュの役割分担 | [35章](35-loader-and-query-cache.md) |
 | 規約をどこに書くか | [33章](33-convention-placement.md) |
 | バックログ（画像/R2、グラフ、PR、オフライン） | [15章](15-requirements-mvp.md) |
 
@@ -48,6 +49,7 @@
 - [32. フロントを feature 単位に切る](32-feature-folders.md) — ⚠️ 依存は workouts → exercises の一方向
 - [33. 規約の置き場所を分ける](33-convention-placement.md) — lint / スキル / コメント / design-notes の分担
 - [34. api の整理](34-api-structure.md) — クエリのドメイン分割、テストの同居、移行コードの隔離
+- [35. loader と Query のキャッシュ](35-loader-and-query-cache.md) — 役割分担、Router のキャッシュは何をするか（実測）
 
 ## フェーズ1 の実装ログ
 

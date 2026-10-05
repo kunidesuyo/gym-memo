@@ -1,6 +1,14 @@
-import { createRootRoute, Link, Outlet } from '@tanstack/react-router'
+import type { QueryClient } from '@tanstack/react-query'
+import {
+  createRootRouteWithContext,
+  Link,
+  Outlet,
+} from '@tanstack/react-router'
 
-export const Route = createRootRoute({
+/** loader はフックを呼べないので、queryClient はコンテキストで渡す。 */
+export type RouterContext = { queryClient: QueryClient }
+
+export const Route = createRootRouteWithContext<RouterContext>()({
   component: () => (
     <div className="mx-auto min-h-dvh max-w-md">
       <nav className="flex gap-4 border-b px-4 py-3 text-sm">
