@@ -1,4 +1,5 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link, useRouter } from '@tanstack/react-router'
+import { Button } from '@/components/ui/button'
 import { workoutQueryOptions } from '@/features/workouts/api'
 import { WorkoutDetail } from '@/features/workouts/WorkoutDetail'
 
@@ -23,10 +24,42 @@ export const Route = createFileRoute('/workouts/$workoutId')({
       staleTime: 'static',
     }),
 
+  /**
+   * loader と `useSuspenseQuery` の失敗はここに来る（画面側に分岐は無い）。
+   *
+   * ⚠️ 再試行は `router.invalidate()`。`reset()` は境界の UI を戻すだけで
+   *    loader を再実行しないので、同じエラーのまま描き直される。
+   */
+  errorComponent: ({ error }) => (
+    <WorkoutError
+      message={error instanceof Error ? error.message : String(error)}
+    />
+  ),
+
   component: RouteComponent,
 })
 
 function RouteComponent() {
   const { workoutId } = Route.useParams()
   return <WorkoutDetail workoutId={workoutId} />
+}
+
+function WorkoutError({ message }: { message: string }) {
+  const router = useRouter()
+  return (
+    <div className="flex flex-col items-start gap-3">
+      <p role="alert" className="text-destructive text-sm">
+        {message}
+      </p>
+      <div className="flex gap-2">
+        <Button type="button" onClick={() => router.invalidate()}>
+          再試行
+        </Button>
+        {/* Base UI は asChild ではなく render（dialog.tsx と同じ形） */}
+        <Button variant="outline" render={<Link to="/" />}>
+          記録に戻る
+        </Button>
+      </div>
+    </div>
+  )
 }

@@ -6,7 +6,8 @@ import {
 } from '@tanstack/react-router'
 import { WORKOUT_ID, workoutFixture } from '@test/msw/handlers'
 import { server } from '@test/msw/server'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { delay, HttpResponse, http } from 'msw'
 import { describe, expect, it } from 'vitest'
 import { routeTree } from '@/routeTree.gen'
@@ -35,8 +36,8 @@ function renderAt(path: string) {
 }
 
 describe('/workouts/$workoutId の loader', () => {
-  it('ローディングを経由せずに表示する（loader が取り終えてから描く）', async () => {
-    // 取得に時間をかけて、ローディングが出る隙を作る
+  it('データが揃うまで何も描かない（loader が待たせている）', async () => {
+    // 取得に時間をかけて、途中の状態を観察できるようにする
     server.use(
       http.get('/api/workouts/:id', async () => {
         await delay(100)
@@ -47,13 +48,13 @@ describe('/workouts/$workoutId の loader', () => {
     const { queryClient } = renderAt(`/workouts/${WORKOUT_ID}`)
 
     // ⚠️ **1ティック待ってから、データが来る前に**見ること。実測した推移:
-    //      loader あり: 同期=空 / 1ティック後=空        / データ到着で一気に描画
-    //      loader なし: 同期=空 / 1ティック後=読み込み中 / データ到着で差し替え
-    //    同期直後はどちらも空（Router がまだルートを解決していない）。
-    //    await findByText のあとだとどちらも表示が消えている。
-    //    この1点でしか区別できない。
+    //      loader あり: 同期=空 / 1ティック後=空        / 完了で一気に描画
+    //      loader なし: 同期=空 / 1ティック後=ナビだけ  / 完了で本体が入る
+    //    loader があると Router がルート解決まで何も描かないので、
+    //    ルート直下のナビ（__root.tsx）すら出ない。
+    //    同期直後はどちらも空。完了後はどちらも全部出る。この1点でしか区別できない。
     await new Promise((resolve) => setTimeout(resolve, 0))
-    expect(screen.queryByText('読み込み中...')).toBeNull()
+    expect(screen.queryByText('記録')).toBeNull()
 
     expect(await screen.findByText('2026-09-20')).toBeInTheDocument()
 
@@ -96,27 +97,41 @@ describe('/workouts/$workoutId の loader', () => {
     await screen.findByText('2026-09-20')
     await new Promise((resolve) => setTimeout(resolve, 60))
 
-    // ⚠️ 1回は画面側の useQuery（既定 staleTime: 0）による取り直し。
-    //    loader からも取ると 2 になる。`staleTime: 'static'` を外すと落ちる。
-    expect(calls).toBe(1)
+    // ⚠️ **1回も取りに行かない。**
+    //    loader は staleTime: 'static' でキャッシュを使い、画面側の
+    //    useSuspenseQuery も `suspense: true` を強制するためマウント時に
+    //    取り直さない（useQuery のままだと既定 staleTime: 0 で1回走っていた）。
+    //    `staleTime: 'static'` を外すと loader が取りに行って 1 になる。
+    expect(calls).toBe(0)
   })
 
-  it('取得に失敗しても画面は落ちない', async () => {
+  it('失敗したら errorComponent がサーバーの文言と再試行を出す', async () => {
+    let calls = 0
     server.use(
-      http.get('/api/workouts/:id', () =>
-        HttpResponse.json({ error: 'workout not found' }, { status: 404 }),
-      ),
+      http.get('/api/workouts/:id', () => {
+        calls++
+        return HttpResponse.json(
+          { error: 'workout not found' },
+          { status: 404 },
+        )
+      }),
     )
 
     renderAt(`/workouts/${WORKOUT_ID}`)
 
-    // loader が throw するので Router のエラー境界に入る。
-    // errorComponent を置いていないので既定の表示になるが、
-    // 少なくともサーバーの文言が拾えていること（errorFrom が効いている）を見る。
+    // loader が throw するのでルートの errorComponent に入る。
+    // errorFrom がサーバーの { error } を拾っていることも見ている。
     expect(
-      await screen.findByText(/workout not found/, undefined, {
+      await screen.findByText('workout not found', undefined, {
         timeout: 3000,
       }),
     ).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '記録に戻る' })).toBeInTheDocument()
+
+    // ⚠️ 再試行は router.invalidate()。reset() だと境界の UI しか戻らず
+    //    loader が再実行されないので、取得が走らない。
+    const before = calls
+    await userEvent.click(screen.getByRole('button', { name: '再試行' }))
+    await waitFor(() => expect(calls).toBeGreaterThan(before))
   })
 })

@@ -3,6 +3,7 @@ import {
   useMutation,
   useQuery,
   useQueryClient,
+  useSuspenseQuery,
 } from '@tanstack/react-query'
 import type { SetInput } from 'api/schema/set'
 import type { InferResponseType } from 'hono/client'
@@ -43,7 +44,8 @@ export function useWorkouts() {
  * セッション1件。**loader とコンポーネントで同じ定義を共有する**ため
  * queryOptions に切り出してある。
  *
- * ルート側が loader で `ensureQueryData(workoutQueryOptions(id))` を呼ぶので、
+ * ルート側が loader で `query({ ...workoutQueryOptions(id), staleTime: 'static' })` を
+ * 呼ぶので、
  * コンポーネントがマウントする時点でキャッシュに入っている。
  * キャッシュの持ち主は Query だけ（Router 側の loader キャッシュは使わない）。
  */
@@ -58,8 +60,20 @@ export function workoutQueryOptions(id: string) {
   })
 }
 
+/**
+ * セッション1件を読む。**`data` は undefined にならない。**
+ *
+ * ルート側の loader が同じ queryOptions でキャッシュを温めているので、
+ * 実際にはここで待つことはない（= サスペンドしない）。
+ *
+ * ⚠️ 失敗は throw される。受け止めるのはルートの `errorComponent`。
+ *    画面側で `error` を見る分岐は不要（あっても到達しない）。
+ * ⚠️ `useSuspenseQuery` は `enabled` / `throwOnError` / `placeholderData` を
+ *    受け付けない（型定義で OmitKeyof されている）。条件付きで取得したいクエリは
+ *    `useQuery` のまま残すこと（`useLastSets` がそれ）。
+ */
 export function useWorkout(id: string) {
-  return useQuery(workoutQueryOptions(id))
+  return useSuspenseQuery(workoutQueryOptions(id))
 }
 
 export function useLastSets(exerciseId: string, excludeWorkoutId: string) {
