@@ -1,0 +1,10 @@
+# ツールのバージョンをリポジトリで固定する。
+# mise が入っていない環境向けの検出は package.json の engines + .npmrc の
+# engine-strict に任せる（こちらは「用意する」、あちらは「間違いを止める」）。
+[tools]
+# ⚠️ パッチまで固定する。セキュリティ更新をコミットの履歴に残すため。
+# 2026-10-21 の security release（CVE-2026-111497 など）で 24.22.1 に上げた。
+node = "24.22.1"
+
+# infra/main.tf の required_version = ">= 1.10" に合わせる。
+terraform = "1.10"
