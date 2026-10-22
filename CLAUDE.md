@@ -218,8 +218,13 @@ HTTP 層のテストは `routes.ts` が分割できないので **`src/routes.<�
 
 ## 環境の癖
 
+- **ツールのバージョンは `mise.toml` で固定**。`engines` + `.npmrc` の `engine-strict=true` で
+  満たさない環境では `pnpm install` も `pnpm test` も**止まる**（既定は WARN で素通りする）
+  ⚠️ **clone 直後に `mise trust` が必要。** 未実行だと mise が `mise.toml` を読まずにエラーになる
+  ⚠️ **node を上げると `npm i -g` したものが消える**（pnpm が node の中に入っている）。
+  `npm i -g pnpm@<版>` で入れ直す
 - **TypeScript 7 は `baseUrl` を廃止**。`paths` だけで `@/` を張る
-- **`apps/api/scripts/` の相対 import には `.ts` を付ける**。`node --experimental-strip-types`
+- **`apps/api/migration/` の相対 import には `.ts` を付ける**。`node --experimental-strip-types`
   で直接実行するため。tsc 側は `allowImportingTsExtensions` で通している（`--noEmit` なので安全）
 - **Biome の対象外**: `components/ui/`（shadcn 生成物）、`routeTree.gen.ts`、`src/index.css`（Tailwind v4 構文を CSS パーサが読めない）、`worker-configuration.d.ts`
 - **`worker-configuration.d.ts` はコミットする**。生成物だが、無いと clone 直後の typecheck が落ちる
